@@ -1,2 +1,2 @@
 # soldier-strikeri
-Parkour Mario game
+Parkour game
