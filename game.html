@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Soldier Strike - Advanced Version</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #050508;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            box-shadow: 0 0 60px rgba(0, 255, 150, 0.25);
+            border: 4px solid #1a251c;
+            border-radius: 12px;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            display: none;
+            pointer-events: none;
+        }
+        .ui-btn {
+            position: absolute;
+            top: 15px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            pointer-events: auto;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #ingame-menu-btn {
+            right: 15px;
+            background: linear-gradient(#93514a, #733e39);
+            border: 2px solid #3c1a17;
+            box-shadow: 0 3px 0px #3c1a17;
+        }
+        #ingame-menu-btn:hover { background: #914f49; }
+        #ingame-menu-btn:active { transform: translateY(2px); box-shadow: 0 1px 0px #3c1a17; }
+
+        #daynight-btn {
+            right: 125px;
+            background: linear-gradient(#f39c12, #d35400);
+            border: 2px solid #a04000;
+            box-shadow: 0 3px 0px #a04000;
+        }
+
+        #coin-counter {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fcb434;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            background: rgba(15, 20, 15, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 2px solid #fcb434;
+            box-shadow: 0 0 10px rgba(252, 180, 52, 0.2);
+        }
+
+        #level-indicator {
+            position: absolute;
+            top: 15px;
+            left: 160px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            background: rgba(20, 25, 35, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 2px solid #4a5a6a;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            height: 90px;
+            z-index: 8;
+            pointer-events: none;
+            display: none;
+        }
+        .touch-btn {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+pointer-events: auto;
+            backdrop-filter: blur(2px);
+        }
+        .touch-btn:active {
+            background: rgba(252, 180, 52, 0.3);
+            border-color: #fcb434;
+            color: #fcb434;
+        }
+        #btn-left { left: 20px; bottom: 5px; }
+        #btn-right { left: 110px; bottom: 5px; }
+        #btn-jump { right: 20px; bottom: 5px; width: 90px; height: 90px; font-size: 15px; background: rgba(58, 87, 50, 0.3); border-color: rgba(76, 115, 66, 0.5); border-radius: 18px; }
+        #btn-jump:active { background: rgba(76, 115, 66, 0.6); }
+
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(10, 18, 12, 0.96), rgba(6, 7, 12, 0.98));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 8px;
+        }
+        
+        #shop-menu {
+            justify-content: flex-start;
+            overflow-y: auto;
+            padding: 25px 0;
+            box-sizing: border-box;
+        }
+        #shop-menu::-webkit-scrollbar { width: 6px; }
+        #shop-menu::-webkit-scrollbar-thumb { background: #34495e; border-radius: 4px; }
+
+        .menu-title {
+            font-size: 46px;
+            font-weight: 900;
+            color: #fcb434;
+            text-shadow: 3px 3px 0px #000, 0 0 25px rgba(252, 180, 52, 0.4);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-align: center;
+        }
+
+        .menu-btn-container {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            position: relative;
+        }
+        .menu-btn {
+            width: 240px;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(#4d5a35, #353f23);
+            border: 2px solid #222a16;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0px #1b2211, 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.1s ease;
+            text-align: center;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .menu-btn:hover { background: linear-gradient(#5a693d, #3f4b29); transform: translateY(-1px); box-shadow: 0 5px 0px #1b2211, 0 6px 12px rgba(0,0,0,0.6); }
+        .menu-btn:active { transform: translateY(4px); box-shadow: 0 0px 0px #1b2211; }
+        
+        .crystal {
+            width: 10px;
+            height: 18px;
+            background: #00ffcc;
+            margin: 0 15px;
+            display: inline-block;
+            transform: rotate(45deg);
+            box-shadow: 0 0 12px #00ffcc, inset 0 0 4px #fff;
+            border-radius: 2px;
+            animation: crystalPulse 1.5s infinite ease-in-out;
+            transition: all 0.3s;
+        }
+        .crystal.left { animation-delay: 0s; }
+        .crystal.right { animation-delay: 0.75s; }
+
+        @keyframes crystalPulse {
+            0% { transform: rotate(45deg) scale(0.9); opacity: 0.6; box-shadow: 0 0 8px #00ffcc; }
+            50% { transform: rotate(45deg) scale(1.2); opacity: 1; box-shadow: 0 0 18px #00ffcc, 0 0 25px #00ffcc; }
+            100% { transform: rotate(45deg) scale(0.9); opacity: 0.6; box-shadow: 0 0 8px #00ffcc; }
+        }
+
+        .game-version-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: bold;
+            margin-top: 15px;
+            letter-spacing: 1px;
+        }
+
+        .archive-status-label {
+            font-size: 14px;
+            color: #00ffcc;
+            font-weight: bold;
+            margin-top: 5px;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+margin: 25px 0 12px 0;
+            text-shadow: 2px 2px 0px #000;
+            border-bottom: 2px solid #2c3e50;
+            width: 90%;
+            max-width: 740px;
+            padding-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        
+        .back-btn { background: linear-gradient(#a24d44, #79342d); border-color: #441612; box-shadow: 0 4px 0px #441612; margin-top: 20px; width: 200px; }
+        .back-btn:hover { background: linear-gradient(#b8574c, #893b33); box-shadow: 0 5px 0px #441612; }
+        .back-btn:active { box-shadow: 0 0px 0px #441612; }
+
+        .shop-balance {
+            font-size: 19px;
+            color: #fcb434;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            width: 95%;
+            max-width: 740px;
+        }
+        .shop-item {
+            background: linear-gradient(#1a221d, #121815);
+            border: 2px solid #2d3b32;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+            transition: border-color 0.2s;
+        }
+        .shop-item:hover { border-color: #3e5346; }
+        
+        .skin-canvas-preview {
+            width: 75px;
+            height: 70px;
+            background: #090d0b;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .skin-name { font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #eceff1; }
+        .skin-price { font-size: 13px; color: #fcb434; font-weight: bold; margin-bottom: 10px; }
+        
+        .buy-btn {
+            width: 100%;
+            padding: 8px 0;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(#27ae60, #1e8449);
+            border: 2px solid #145a32;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 0px #145a32;
+            text-transform: uppercase;
+        }
+        .buy-btn:hover { background: linear-gradient(#2ecc71, #229954); }
+        .buy-btn.equipped { background: linear-gradient(#fcb434, #d4ac0d); color: black; border-color: #9a7d0a; box-shadow: 0 2px 0px #9a7d0a; }
+        .buy-btn.owned { background: linear-gradient(#566573, #34495e); border-color: #2c3e50; box-shadow: 0 2px 0px #2c3e50; }
+
+        .credits-box {
+            background: #111612;
+            border: 2px solid #34495e;
+            padding: 25px 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .credits-box p { font-size: 16px; margin: 10px 0; color: #b2babb; }
+        .highlight-name { color: #fcb434; font-size: 26px; font-weight: bold; display: block; text-shadow: 0 2px 8px rgba(252,180,52,0.4); margin-bottom: 5px; }
+
+        .promo-container {
+            background: #111612;
+            border: 2px solid #27ae60;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .promo-input {
+            width: 90%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #27ae60;
+            border-radius: 6px;
+            background-color: #080c09;
+            color: #fff;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            margin-bottom: 18px;
+            letter-spacing: 2px;
+        }
+        .promo-input:focus { border-color: #fcb434; box-shadow: 0 0 12px rgba(252, 180, 52, 0.4); }
+        .promo-submit-btn {
+width: 98%;
+            padding: 12px 0;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(#27ae60, #1e8449);
+            border: 2px solid #145a32;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 3px 0px #145a32;
+        }
+        .promo-submit-btn:hover { background: linear-gradient(#2ecc71, #229954); }
+
+        /* Стили для окон архивации */
+        .archive-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 15px;
+        }
+        .archive-slot-btn {
+            padding: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(#2e4053, #212f3d);
+            border: 2px solid #17202a;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #11171d;
+            text-align: center;
+            transition: all 0.1s ease;
+        }
+        .archive-slot-btn:hover { background: linear-gradient(#34495e, #2c3e50); transform: translateY(-1px); box-shadow: 0 5px 0 #11171d; }
+        .archive-slot-btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #11171d; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div id="ui-layer">
+            <div id="coin-counter">🪙 0</div>
+            <div id="level-indicator">УРОВЕНЬ: 1</div>
+            <button id="daynight-btn" class="ui-btn" onclick="toggleDayNight()">ДЕНЬ ☀️</button>
+            <button id="ingame-menu-btn" class="ui-btn" onclick="returnToMenu()">МЕНЮ</button>
+            
+            <div id="mobile-joystick" class="mobile-controls">
+                <div id="btn-left" class="touch-btn">←</div>
+                <div id="btn-right" class="touch-btn">→</div>
+                <div id="btn-jump" class="touch-btn">ПРЫЖОК</div>
+            </div>
+        </div>
+
+        <div id="archive-menu" class="menu-screen">
+            <div class="menu-title">ВЫБЕРЕТЕ АРХИВ</div>
+            <p style="color: #b2babb; margin-bottom: 20px;">Выберите цифру сохранения игры:</p>
+            <div class="archive-grid">
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(1)">1</button>
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(2)">2</button>
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(3)">3</button>
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(4)">4</button>
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(5)">5</button>
+                <button class="archive-slot-btn" onclick="selectArchiveSlot(6)">6</button>
+            </div>
+        </div>
+
+        <div id="main-menu" class="menu-screen" style="display: none;">
+            <div class="menu-title">SOLDIER STRIKE</div>
+            
+            <div class="menu-btn-container">
+                <div class="crystal left"></div>
+                <button class="menu-btn" onclick="startGame(1)">СТАРТ</button>
+                <div class="crystal right"></div>
+            </div>
+            <div class="menu-btn-container">
+                <div class="crystal left"></div>
+                <button class="menu-btn" onclick="openShop()">МАГАЗИН</button>
+                <div class="crystal right"></div>
+            </div>
+            <div class="menu-btn-container">
+                <div class="crystal left"></div>
+                <button class="menu-btn" onclick="switchScreen('promo-menu')">ПРОМОКОДЫ</button>
+                <div class="crystal right"></div>
+            </div>
+            <div class="menu-btn-container">
+                <div class="crystal left"></div>
+                <button class="menu-btn" onclick="switchScreen('credits-menu')">О Б АВТОРЕ</button>
+<div class="crystal right"></div>
+            </div>
+            <div class="menu-btn-container">
+                <div class="crystal left"></div>
+                <button class="menu-btn" style="background: linear-gradient(#7f8c8d, #626567); border-color: #424949; box-shadow: 0 4px 0px #2e4053;" onclick="exitCurrentArchive()">ВЫЙТИ ИЗ АРХИВА</button>
+                <div class="crystal right"></div>
+            </div>
+
+            <div class="game-version-label">v1.3.0-SAPPHIRE</div>
+            <div class="archive-status-label" id="menu-archive-label">АКТИВНЫЙ АРХИВ: СЛОТ 1</div>
+        </div>
+
+        <div id="shop-menu" class="menu-screen" style="display: none;">
+            <div class="menu-title" style="margin-top:10px;">МАГАЗИН</div>
+            <div class="shop-balance" id="shop-balance-text">Баланс: 0 🪙</div>
+            
+            <div class="section-title">СКИНЫ ВОЕННОГО</div>
+            <div class="shop-grid">
+                <div class="shop-item">
+                    <canvas id="ic-skin-0" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Болотный Спец</div>
+                    <div class="skin-price">100 🪙</div>
+                    <button class="buy-btn" id="btn-skin-0" onclick="buyOrSelectSkin(0)">КУПИТЬ</button>
+                </div>
+                <div class="shop-item">
+                    <canvas id="ic-skin-1" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Железный Титан</div>
+                    <div class="skin-price">500 🪙</div>
+                    <button class="buy-btn" id="btn-skin-1" onclick="buyOrSelectSkin(1)">КУПИТЬ</button>
+                </div>
+                <div class="shop-item">
+                    <canvas id="ic-skin-2" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Кристалл Кибер</div>
+                    <div class="skin-price">2500 🪙</div>
+                    <button class="buy-btn" id="btn-skin-2" onclick="buyOrSelectSkin(2)">КУПИТЬ</button>
+                </div>
+                <div class="shop-item">
+                    <canvas id="ic-skin-3" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">ГИПЕР НЕОН</div>
+                    <div class="skin-price">9999 🪙</div>
+                    <button class="buy-btn" id="btn-skin-3" onclick="buyOrSelectSkin(3)">КУПИТЬ</button>
+                </div>
+            </div>
+
+            <div class="section-title">АРСЕНАЛ ОРУЖИЯ (УВЕЛИЧЕННЫЕ)</div>
+            <div class="shop-grid" style="grid-template-columns: repeat(3, 1fr); max-width: 560px; margin-bottom: 20px;">
+                <div class="shop-item">
+                    <canvas id="preview-kerambit" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Керамбит Изумруд</div>
+                    <div class="skin-price" id="price-weapon-0">30000 🪙</div>
+                    <button class="buy-btn" id="btn-weapon-0" onclick="buyOrSelectWeapon(0)">КУПИТЬ</button>
+                </div>
+                <div class="shop-item">
+                    <canvas id="preview-butterfly" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Сапфировый Меч</div>
+                    <div class="skin-price" id="price-weapon-1">50000 🪙</div>
+                    <button class="buy-btn" id="btn-weapon-1" onclick="buyOrSelectWeapon(1)">КУПИТЬ</button>
+                </div>
+                <div class="shop-item">
+                    <canvas id="preview-gradient" class="skin-canvas-preview" width="75" height="70"></canvas>
+                    <div class="skin-name">Штурмовой Градиент</div>
+                    <div class="skin-price" id="price-weapon-2">100000 🪙</div>
+                    <button class="buy-btn" id="btn-weapon-2" onclick="buyOrSelectWeapon(2)">КУПИТЬ</button>
+</div>
+            </div>
+
+            <button class="menu-btn back-btn" onclick="switchScreen('main-menu')" style="margin-bottom:15px;">НАЗАД</button>
+        </div>
+
+        <div id="promo-menu" class="menu-screen" style="display: none;">
+            <div class="menu-title">ПРОМОКОДЫ</div>
+            <div class="promo-container">
+                <input type="text" id="promo-code-input" class="promo-input" placeholder="ВВЕДИТЕ КОД" maxlength="20">
+                <button class="promo-submit-btn" onclick="activatePromoCode()">АКТИВИРОВАТЬ</button>
+            </div>
+            <button class="menu-btn back-btn" onclick="switchScreen('main-menu')">НАЗАД</button>
+        </div>
+
+        <div id="credits-menu" class="menu-screen" style="display: none;">
+            <div class="menu-title">ИНФОРМАЦИЯ</div>
+            <div class="credits-box">
+                <p>Главный разработчик и создатель игры:</p>
+                <span class="highlight-name">@Nazaros2009</span>
+                <p style="font-size: 13px; color: #7f8c8d; margin-top: 15px;">Платформа: HTML5 High-Detail Canvas<br>Текущий год: 2026</p>
+            </div>
+            <button class="menu-btn back-btn" onclick="switchScreen('main-menu')">НАЗАД</button>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let isPlaying = false;
+let spawnLock = false; 
+let GlobalCoins = 0; 
+let currentSkin = -1; 
+let currentWeapon = -1; 
+let isNight = false;
+let currentLevel = 1; 
+let currentArchiveSlot = null; // Номер текущей архивации (1, 2, 3...)
+
+// ДЕЛЬТА ТАЙМЕР
+let lastTime = performance.now();
+let dt = 0;
+const TARGET_FPS = 60;
+
+// ЗВУКОВОЙ ДВИЖОК
+let audioCtx = null;
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playSound(type) {
+    if (!audioCtx) return;
+    try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        
+        if (type === 'jump') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(380, now + 0.15);
+            gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'coin') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, now);
+            osc.frequency.setValueAtTime(880, now + 0.07);
+            gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'hit') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now);
+            osc.frequency.linearRampToValueAtTime(30, now + 0.3);
+            gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'slash') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.18);
+            gainNode.gain.setValueAtTime(0.25, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.18);
+            osc.start(now); osc.stop(now + 0.18);
+        }
+    } catch(e) { console.log(e); }
+}
+
+const shopData = [
+    { id: 0, name: "Болотный Спец", price: 100, purchased: false, colors: { base: "#4c6e43", dark: "#223a1c", neon: "#a3e4d7" } },
+    { id: 1, name: "Железный Титан", price: 500, purchased: false, colors: { base: "#95a5a6", dark: "#34495e", neon: "#e74c3c" } },
+    { id: 2, name: "Кристалл Кибер", price: 2500, purchased: false, colors: { base: "#2e4053", dark: "#1a252f", neon: "#00ffff" } },
+{ id: 3, name: "ГИПЕР НЕОН", price: 9999, purchased: false, colors: { base: "#ff007f", dark: "#2a0033", neon: "#ccff00" } }
+];
+
+const weaponData = [
+    { id: 0, name: "Керамбит Изумруд", price: 30000, purchased: false, expiresAt: null },
+    { id: 1, name: "Сапфировый Меч", price: 50000, purchased: false, expiresAt: null },
+    { id: 2, name: "Штурмовой Градиент", price: 100000, purchased: false, expiresAt: null }
+];
+
+// ================= ФУНКЦИИ АРХИВАЦИИ И СОХРАНЕНИЯ =================
+function saveToArchive() {
+    if (!currentArchiveSlot) return;
+    const saveData = {
+        coins: GlobalCoins,
+        currentSkin: currentSkin,
+        currentWeapon: currentWeapon,
+        purchasedSkins: shopData.map(s => s.purchased),
+        purchasedWeapons: weaponData.map(w => w.purchased)
+    };
+    localStorage.setItem("ss_archive_slot_" + currentArchiveSlot, JSON.stringify(saveData));
+}
+
+function loadFromArchive(slot) {
+    currentArchiveSlot = slot;
+    document.getElementById("menu-archive-label").innerText = "АКТИВНЫЙ АРХИВ: СЛОТ " + slot;
+    const rawData = localStorage.getItem("ss_archive_slot_" + slot);
+    
+    if (rawData) {
+        try {
+            const loadData = JSON.parse(rawData);
+            GlobalCoins = loadData.coins || 0;
+            currentSkin = loadData.currentSkin !== undefined ? loadData.currentSkin : -1;
+            currentWeapon = loadData.currentWeapon !== undefined ? loadData.currentWeapon : -1;
+            
+            if (loadData.purchasedSkins) {
+                loadData.purchasedSkins.forEach((p, idx) => { if (shopData[idx]) shopData[idx].purchased = p; });
+            }
+            if (loadData.purchasedWeapons) {
+                loadData.purchasedWeapons.forEach((p, idx) => { if (weaponData[idx]) weaponData[idx].purchased = p; });
+            }
+        } catch(e) {
+            console.error("Ошибка загрузки архива", e);
+            resetArchiveState();
+        }
+    } else {
+        // Если слот пустой, сбрасываем состояние на дефолт для нового архива
+        resetArchiveState();
+    }
+}
+
+function resetArchiveState() {
+    GlobalCoins = 0;
+    currentSkin = -1;
+    currentWeapon = -1;
+    shopData.forEach(s => s.purchased = false);
+    weaponData.forEach(w => w.purchased = false);
+}
+
+function selectArchiveSlot(slot) {
+    initAudio();
+    loadFromArchive(slot);
+    document.getElementById("archive-menu").style.display = "none";
+    document.getElementById("main-menu").style.display = "flex";
+}
+
+function exitCurrentArchive() {
+    saveToArchive(); // Сохраняем перед выходом
+    currentArchiveSlot = null;
+    document.getElementById("main-menu").style.display = "none";
+    document.getElementById("archive-menu").style.display = "flex";
+}
+// =================================================================
+
+let usedPromos = [];
+const camera = { x: 0, width: 800 };
+let levelWidth = 3600; 
+const GLOBAL_GRAVITY = 0.6;
+
+const player = {
+    x: 50, y: 300, width: 34, height: 52,
+    speed: 5.2, dx: 0, dy: 0,
+    jumpPower: -12.8, grounded: false, 
+    direction: "right", animTime: 0
+};
+
+let particles = [];
+let forestLeaves = []; 
+
+const dailyChest = {
+    x: 3100, y: 320, width: 50, height: 40,
+    cooldown: 24 * 60 * 60 * 1000, 
+    chestMessage: "",
+    msgTimer: 0
+};
+
+let gameEndedState = false; 
+
+function spawnParticle(x, y, color, type) {
+    let count = type === 'laser' ? 3 : 1;
+    for(let i=0; i<count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * (type === 'laser' ? 5 : 2),
+            vy: type === 'laser' ? (Math.random() - 0.5) * 5 : -Math.random() * 2,
+            size: Math.random() * 3.5 + 1,
+            color: color,
+            alpha: 1,
+            life: Math.random() * 25 + 15
+        });
+    }
+}
+
+for (let i = 0; i < 70; i++) {
+    forestLeaves.push({
+        x: Math.random() * 3600,
+        y: Math.random() * 350,
+        size: Math.random() * 3 + 1.5,
+        speedX: (Math.random() - 0.5) * 0.8,
+speedY: Math.random() * 0.5 + 0.3,
+        pulse: Math.random() * Math.PI
+    });
+}
+
+const backgroundStars = [];
+for(let i=0; i<120; i++) {
+    backgroundStars.push({ x: Math.random() * 3600, y: Math.random() * 180, size: Math.random() * 1.8 + 0.5 });
+}
+
+const forestLayers = [[], [], [], []];
+for (let layer = 0; layer < 4; layer++) {
+    let count = 25 + layer * 15; 
+    for (let i = 0; i < count; i++) {
+        forestLayers[layer].push({
+            x: Math.random() * 3800,
+            baseY: 375,
+            scale: (0.4 + layer * 0.25) * (Math.random() * 0.3 + 0.85),
+            layersCount: Math.floor(Math.random() * 2) + 4 + layer, 
+            opacity: 0.15 + layer * 0.25
+        });
+    }
+}
+
+const castleLayers = [[], [], [], []];
+for (let layer = 0; layer < 4; layer++) {
+    let count = 12 + layer * 5;
+    for (let i = 0; i < count; i++) {
+        castleLayers[layer].push({
+            x: Math.random() * 3800,
+            width: 50 + Math.random() * 60,
+            height: 90 + layer * 40 + Math.random() * 50
+        });
+    }
+}
+
+let platforms = []; let lasers = []; let coins = []; let zombies = []; let floatingTexts = []; let lavaZones = [];
+const portal = { x: 3450, y: 190, width: 30, height: 80, pulse: 0 };
+
+function loadLevelData(lvl) {
+    currentLevel = lvl;
+    let title = "1 (Густая Чаща)";
+    if (lvl === 2) title = "2 (Королевство Камня)";
+    if (lvl === 3) title = "3 (Пещеры Подземелья)";
+    document.getElementById("level-indicator").innerText = "УРОВЕНЬ: " + title;
+    levelWidth = 3600;
+    lavaZones = [];
+    gameEndedState = false;
+
+    if (lvl === 1) {
+        portal.x = 3460; portal.y = 190;
+        platforms = [
+            { x: 0, y: 370, width: 450, height: 30, color: "#3d2b1f", grassColor: "#27ae60" },  
+            { x: 220, y: 270, width: 110, height: 22, color: "#5d6d7e", grassColor: "#2ecc71" }, 
+            { x: 520, y: 310, width: 120, height: 90, color: "#3d2b1f", grassColor: "#1e8449" },   
+            { x: 720, y: 220, width: 100, height: 22, color: "#3d2b1f", grassColor: "#27ae60" },   
+            { x: 890, y: 150, width: 90, height: 22, color: "#3d2b1f", grassColor: "#27ae60" },   
+            { x: 1050, y: 340, width: 350, height: 60, color: "#3d2b1f", grassColor: "#1e8449" },  
+            { x: 1150, y: 240, width: 120, height: 22, color: "#5d6d7e", grassColor: "" }, 
+            { x: 1480, y: 270, width: 80, height: 130, color: "#3d2b1f", grassColor: "#1e8449" },
+            { x: 1640, y: 190, width: 80, height: 210, color: "#3d2b1f", grassColor: "#1e8449" }, 
+            { x: 1800, y: 130, width: 110, height: 22, color: "#3d2b1f", grassColor: "#27ae60" },  
+            { x: 1980, y: 210, width: 100, height: 22, color: "#3d2b1f", grassColor: "#27ae60" },
+            { x: 2150, y: 300, width: 160, height: 22, color: "#5d6d7e", grassColor: "" },
+            { x: 2380, y: 230, width: 90, height: 170, color: "#3d2b1f", grassColor: "#1e8449" },
+            { x: 2540, y: 150, width: 120, height: 22, color: "#5d6d7e", grassColor: "" },
+            { x: 2750, y: 240, width: 140, height: 22, color: "#3d2b1f", grassColor: "#27ae60" },
+            { x: 2960, y: 320, width: 200, height: 80, color: "#3d2b1f", grassColor: "#1e8449" },
+            { x: 3250, y: 370, width: 400, height: 30, color: "#3d2b1f", grassColor: "#27ae60" },  
+            { x: 3450, y: 270, width: 55, height: 100, color: "#2d1f16", grassColor: "#14300b" }   
+        ];
+        lasers = [
+            { x: 380, y: 325, width: 6, height: 45, pulse: 0 },
+            { x: 1080, y: 295, width: 6, height: 45, pulse: 2 },
+            { x: 1300, y: 295, width: 6, height: 45, pulse: 1 },
+            { x: 2020, y: 165, width: 6, height: 45, pulse: 0 },
+            { x: 2220, y: 255, width: 6, height: 45, pulse: 2 },
+            { x: 2820, y: 195, width: 6, height: 45, pulse: 1.5 }
+        ];
+        zombies = [
+{ isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 530,  y: 200, width: 34, height: 52, speed: 1.6, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 0, minX: 520, maxX: 620 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 730,  y: 130, width: 34, height: 52, speed: 1.8, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 1, minX: 720, maxX: 800 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1060, y: 230, width: 34, height: 52, speed: 2.0, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 1.5, minX: 1050, maxX: 1250 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1180, y: 130, width: 34, height: 52, speed: 2.2, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 2, minX: 1150, maxX: 1250 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1810, y: 50,  width: 34, height: 52, speed: 1.7, dx: 0, dy: 0, jumpPower: -10.5, grounded: false, animTime: 0.5, minX: 1800, maxX: 1890 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2160, y: 150, width: 34, height: 52, speed: 2.1, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 3, minX: 2150, maxX: 2290 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2760, y: 130, width: 34, height: 52, speed: 2.3, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 3.5, minX: 2750, maxX: 2870 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2980, y: 200, width: 34, height: 52, speed: 2.4, dx: 0, dy: 0, jumpPower: -12.0, grounded: false, animTime: 4, minX: 2960, maxX: 3130 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3280, y: 250, width: 34, height: 52, speed: 2.5, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 4.5, minX: 3260, maxX: 3420 }
+        ];
+    } else if (lvl === 2) {
+        portal.x = 3450; portal.y = 220;
+        platforms = [
+            { x: 0, y: 370, width: 320, height: 30, color: "#34495e", grassColor: "#566573" },
+            { x: 420, y: 300, width: 65, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 580, y: 240, width: 65, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 730, y: 180, width: 85, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 900, y: 260, width: 260, height: 140, color: "#1f2a38", grassColor: "#34495e" },
+            { x: 1250, y: 200, width: 55, height: 200, color: "#2c3e50", grassColor: "" },
+            { x: 1390, y: 140, width: 55, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 1520, y: 220, width: 65, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 1660, y: 300, width: 220, height: 100, color: "#1f2a38", grassColor: "#34495e" },
+            { x: 1990, y: 240, width: 460, height: 30, color: "#34495e", grassColor: "#566573" },
+            { x: 2540, y: 190, width: 55, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 2690, y: 260, width: 55, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 2840, y: 200, width: 55, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 2990, y: 140, width: 75, height: 20, color: "#2c3e50", grassColor: "" },
+            { x: 3180, y: 300, width: 420, height: 100, color: "#1c2833", grassColor: "#465665" }
+        ];
+        lasers = [
+            { x: 960, y: 215, width: 6, height: 45, pulse: 1 },
+            { x: 2080, y: 195, width: 6, height: 45, pulse: 0 },
+            { x: 2300, y: 195, width: 6, height: 45, pulse: 2 }
+        ];
+        zombies = [
+{ isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 940,  y: 150, width: 34, height: 52, speed: 1.5, dx: 0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0, minX: 910, maxX: 1120 },
+            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 1690, y: 200, width: 34, height: 52, speed: 1.9, dx: 0, dy: 0, jumpPower: -12.0, grounded: false, animTime: 1, minX: 1670, maxX: 1840 },
+            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 2020, y: 150, width: 34, height: 52, speed: 2.1, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 2, minX: 2000, maxX: 2200 },
+            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 2240, y: 150, width: 34, height: 52, speed: 1.7, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 3, minX: 2200, maxX: 2420 },
+            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 3250, y: 200, width: 34, height: 52, speed: 2.3, dx: 0, dy: 0, jumpPower: -12.0, grounded: false, animTime: 4, minX: 3200, maxX: 3380 }
+        ];
+    } else if (lvl === 3) {
+        portal.x = 3450; portal.y = 280;
+        platforms = [
+            { x: 0, y: 370, width: 600, height: 30, color: "#1f1f2e", grassColor: "" },
+            { x: 750, y: 300, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1000, y: 230, width: 120, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1250, y: 310, width: 160, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1550, y: 240, width: 100, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1800, y: 290, width: 220, height: 110, color: "#1f1f2e", grassColor: "" },
+            { x: 2150, y: 220, width: 130, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 2400, y: 160, width: 120, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 2650, y: 250, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 2950, y: 360, width: 650, height: 40, color: "#1f1f2e", grassColor: "" }
+        ];
+        
+        lavaZones = [
+            { x: 600, y: 385, width: 1200, height: 20 },
+            { x: 2020, y: 385, width: 930, height: 20 }
+        ];
+
+        lasers = [
+            { x: 300, y: 325, width: 6, height: 45, pulse: 0 },
+            { x: 1900, y: 245, width: 6, height: 45, pulse: 1.5 }
+        ];
+
+        zombies = [
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 250, y: 300, width: 34, height: 52, speed: 1.4, dx: 1.4, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1850, y: 220, width: 34, height: 52, speed: 1.8, dx: 1.8, dy: 0, jumpPower: -11.0, grounded: false, animTime: 2 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3050, y: 290, width: 34, height: 52, speed: 2.0, dx: 2.0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 4 }
+        ];
+    }
+
+    coins = [];
+    for (let i = 0; i < (lvl === 1 ? 25 : 30); i++) {
+        let randomPlat = platforms[Math.floor(Math.random() * (platforms.length - 1)) + 1];
+        let coinX = randomPlat.x + Math.random() * (randomPlat.width - 22);
+        let coinY = randomPlat.y - 35 - (Math.random() * 45); 
+        coins.push({ x: coinX, y: coinY, collected: false, pulse: Math.random() * 5 });
+    }
+}
+
+const keys = { right: false, left: false, jump: false };
+
+window.addEventListener("keydown", (e) => {
+    if (document.activeElement === document.getElementById("promo-code-input")) return;
+    initAudio(); 
+    if (!isPlaying || spawnLock) return;
+if (e.code === "ArrowRight" || e.code === "KeyD") { keys.right = true; player.direction = "right"; }
+    if (e.code === "ArrowLeft" || e.code === "KeyA") { keys.left = true; player.direction = "left"; }
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = true;
+    
+    if (e.code === "KeyE" && currentLevel === 3) {
+        tryOpenDailyChest();
+    }
+    
+    if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+});
+
+window.addEventListener("keyup", (e) => {
+    if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+    if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = false;
+});
+
+function tryOpenDailyChest() {
+    let dist = Math.abs((player.x + player.width/2) - (dailyChest.x + dailyChest.width/2));
+    let vDist = Math.abs((player.y + player.height/2) - (dailyChest.y + dailyChest.height/2));
+    if (dist < 60 && vDist < 60) {
+        let lastOpened = localStorage.getItem("ss_chest_last_opened_" + currentArchiveSlot) || 0;
+        let now = Date.now();
+        if (now - lastOpened >= dailyChest.cooldown) {
+            localStorage.setItem("ss_chest_last_opened_" + currentArchiveSlot, now);
+            GlobalCoins += 10000;
+            playSound('coin');
+            saveToArchive(); // Сохраняем монеты
+            document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+            dailyChest.chestMessage = "УСПЕХ! +10,000 МОНЕТ!";
+            dailyChest.msgTimer = 180;
+        } else {
+            let timeLeft = dailyChest.cooldown - (now - lastOpened);
+            let hours = Math.floor(timeLeft / (3600 * 1000));
+            let mins = Math.floor((timeLeft % (3600 * 1000)) / (60 * 1000));
+            dailyChest.chestMessage = `ПУСТО. ПРИХОДИ ЧЕРЕЗ ${hours}Ч ${mins}М`;
+            dailyChest.msgTimer = 120;
+        }
+    }
+}
+
+function setupMobileControls() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) document.getElementById("mobile-joystick").style.display = "block";
+
+    const bLeft = document.getElementById("btn-left");
+    const bRight = document.getElementById("btn-right");
+    const bJump = document.getElementById("btn-jump");
+
+    bLeft.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) { keys.left = true; player.direction = "left"; } });
+    bLeft.addEventListener("touchend", (e) => { e.preventDefault(); keys.left = false; });
+
+    bRight.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) { keys.right = true; player.direction = "right"; } });
+    bRight.addEventListener("touchend", (e) => { e.preventDefault(); keys.right = false; });
+
+    bJump.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) keys.jump = true; if(currentLevel === 3) tryOpenDailyChest(); });
+    bJump.addEventListener("touchend", (e) => { e.preventDefault(); keys.jump = false; });
+}
+
+function resizeGame() {
+    const container = document.getElementById("game-container");
+    const windowWidth = window.innerWidth; const windowHeight = window.innerHeight;
+    let newWidth = windowWidth; let newHeight = windowWidth / 2;
+    if (newHeight > windowHeight) { newHeight = windowHeight; newWidth = windowHeight * 2; }
+    container.style.width = newWidth + "px"; container.style.height = newHeight + "px";
+}
+
+window.addEventListener("resize", resizeGame);
+window.addEventListener("load", () => { resizeGame(); setupMobileControls(); });
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+
+function toggleDayNight() {
+    isNight = !isNight;
+    applyDayNightUI();
+}
+function applyDayNightUI() {
+    const btn = document.getElementById("daynight-btn");
+    if(isNight) {
+        btn.innerHTML = "НОЧЬ 🌙"; 
+        btn.style.background = "linear-gradient(#2c3e50, #1a252f)"; 
+        btn.style.borderColor = "#151d24";
+        btn.style.boxShadow = "0 3px 0px #151d24";
+    } else {
+        btn.innerHTML = "ДЕНЬ ☀️"; 
+        btn.style.background = "linear-gradient(#f39c12, #d35400)"; 
+        btn.style.borderColor = "#a04000";
+        btn.style.boxShadow = "0 3px 0px #a04000";
+    }
+}
+
+function drawActualWeapon(ctxX, x, y, id, scaleX = 1, isAxe = false, isSword = false, zombieStrikeAngle = 0) {
+    ctxX.save();
+    ctxX.translate(x, y);
+    ctxX.scale(scaleX, 1);
+    
+    if (zombieStrikeAngle !== 0) {
+        ctxX.rotate(zombieStrikeAngle);
+    }
+
+    if (isAxe) {
+        ctxX.fillStyle = "#4a2711"; ctxX.fillRect(-2, -5, 4, 30); 
+        ctxX.fillStyle = "#7f8c8d"; ctxX.strokeStyle = "#1c2833"; ctxX.lineWidth = 1.2;
+        ctxX.beginPath(); 
+        ctxX.moveTo(2, -7); ctxX.lineTo(16, -14); ctxX.lineTo(14, 6); ctxX.lineTo(2, -1); 
+        ctxX.closePath(); ctxX.fill(); ctxX.stroke();
+        ctxX.fillStyle = "#922b21"; ctxX.fillRect(10, -5, 4, 6);
+    } else if (isSword) {
+        ctxX.fillStyle = "#2c3e50"; ctxX.fillRect(-2, 6, 4, 12); 
+        ctxX.fillStyle = "#f1c40f"; ctxX.fillRect(-7, 4, 14, 3); 
+        ctxX.fillStyle = "#95a5a6"; ctxX.strokeStyle = "#34495e"; ctxX.lineWidth = 1.5;
+        ctxX.beginPath(); ctxX.moveTo(-3, 4); ctxX.lineTo(-4, -26); ctxX.lineTo(0, -34); ctxX.lineTo(4, -26); ctxX.lineTo(3, 4); ctxX.closePath(); ctxX.fill(); ctxX.stroke();
+    } else {
+        if (id === 0) { 
+            ctxX.fillStyle = "#111612"; ctxX.strokeStyle = "#196f3d"; ctxX.lineWidth = 1.5;
+            ctxX.beginPath(); ctxX.arc(-5, 0, 4, 0, Math.PI * 2); ctxX.stroke();
+            ctxX.fillRect(-2, -3, 12, 6);
+            let blade = ctxX.createLinearGradient(10, -3, 26, 12); blade.addColorStop(0, "#2ecc71"); blade.addColorStop(1, "#117a65");
+            ctxX.fillStyle = blade; ctxX.lineWidth = 1; ctxX.strokeStyle = "#d4efdf";
+            ctxX.beginPath(); ctxX.moveTo(10, -3); ctxX.quadraticCurveTo(22, -8, 28, 6); ctxX.quadraticCurveTo(18, 12, 10, 3); ctxX.closePath(); ctxX.fill(); ctxX.stroke();
+        } else if (id === 1) { 
+            ctxX.fillStyle = "#1b263b"; ctxX.fillRect(-2, 5, 4, 10); 
+            ctxX.fillStyle = "#e0e1dd"; ctxX.fillRect(-6, 3, 12, 2); 
+            let blade = ctxX.createLinearGradient(0, 3, 0, -28); blade.addColorStop(0, "#415a77"); blade.addColorStop(0.5, "#00b4d8"); blade.addColorStop(1, "#caf0f8");
+            ctxX.fillStyle = blade; ctxX.strokeStyle = "#90e0ef"; ctxX.lineWidth = 1;
+            ctxX.beginPath();
+            ctxX.moveTo(-3, 3); ctxX.lineTo(-3, -24); ctxX.lineTo(0, -32); ctxX.lineTo(3, -24); ctxX.lineTo(3, 3);
+            ctxX.closePath(); ctxX.fill(); ctxX.stroke();
+        } else if (id === 2) { 
+            ctxX.fillStyle = "#111"; ctxX.fillRect(-15, -1, 14, 5); ctxX.fillRect(-3, 4, 4, 10); ctxX.fillStyle = "#2c3e50"; ctxX.fillRect(4, 4, 5, 12); 
+            let grad = ctxX.createLinearGradient(0, -4, 35, -4); grad.addColorStop(0, "#e91e63"); grad.addColorStop(0.5, "#9b59b6"); grad.addColorStop(1, "#00ffff");
+            ctxX.fillStyle = grad; ctxX.fillRect(0, -4, 32, 7); ctxX.fillStyle = "#566573"; ctxX.fillRect(32, -2, 14, 3); ctxX.fillRect(6, -8, 10, 4); 
+        }
+    }
+    ctxX.restore();
+}
+
+function drawSoldier(p) {
+    ctx.save();
+    if (p.direction === "left") {
+        ctx.translate(p.x + p.width / 2, p.y + p.height / 2); ctx.scale(-1, 1); ctx.translate(-(p.x + p.width / 2), -(p.y + p.height / 2));
+    }
+    
+    let primaryColor = "#3b5334"; let darkColor = "#1b2817"; let neonColor = "#55ff55";
+    let isNeonSkin = false;
+    
+    if (currentSkin !== -1) { 
+        primaryColor = shopData[currentSkin].colors.base; 
+        darkColor = shopData[currentSkin].colors.dark; 
+        neonColor = shopData[currentSkin].colors.neon;
+if(currentSkin === 3) isNeonSkin = true;
+    }
+
+    let isMoving = (keys.right || keys.left) && !spawnLock;
+    if (isMoving) p.animTime += 0.22 * dt; else p.animTime += 0.04 * dt; 
+
+    let bodyBob = isMoving ? Math.sin(p.animTime * 1.5) * 2.5 : Math.sin(p.animTime) * 1;
+    let legSwing = isMoving ? Math.sin(p.animTime) * 9 : 0;
+
+    ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(p.x + p.width/2, p.y + p.height, 15, 4.5, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+    ctx.fillStyle = "#111116"; ctx.fillRect(p.x + 2 + legSwing, p.y + p.height - 8, 10, 8); ctx.fillRect(p.x + p.width - 12 - legSwing, p.y + p.height - 8, 10, 8);
+    ctx.fillStyle = primaryColor; ctx.fillRect(p.x + 3 + legSwing, p.y + p.height - 22, 8, 14); ctx.fillRect(p.x + p.width - 11 - legSwing, p.y + p.height - 22, 8, 14);
+
+    let bodyY = p.y + 16 + bodyBob;
+    ctx.fillStyle = primaryColor; ctx.fillRect(p.x + 1, bodyY, p.width - 2, 16); 
+    ctx.fillStyle = darkColor; ctx.fillRect(p.x + 3, bodyY + 1, p.width - 6, 14); 
+    ctx.fillStyle = primaryColor; ctx.fillRect(p.x + 5, bodyY + 4, 6, 6); ctx.fillRect(p.x + p.width - 11, bodyY + 4, 6, 6);
+    
+    if (isNeonSkin) {
+        let pulseGlow = 5 + Math.abs(Math.sin(performance.now() / 150)) * 6;
+        ctx.save(); ctx.shadowBlur = pulseGlow; ctx.shadowColor = neonColor;
+        ctx.fillStyle = neonColor; ctx.fillRect(p.x + 7, bodyY + 5, 2, 5); ctx.fillRect(p.x + p.width - 9, bodyY + 5, 2, 5);
+        ctx.restore();
+    } else {
+        ctx.fillStyle = neonColor; ctx.fillRect(p.x + 7, bodyY + 5, 2, 5); ctx.fillRect(p.x + p.width - 9, bodyY + 5, 2, 5);
+    }
+    
+    ctx.fillStyle = "#111"; ctx.fillRect(p.x + 2, bodyY + 12, p.width - 4, 3);
+
+    let headY = p.y + 3 + bodyBob;
+    ctx.fillStyle = "#f5cdb0"; ctx.fillRect(p.x + 7, headY + 8, p.width - 14, 4);
+    ctx.fillStyle = primaryColor; 
+    ctx.beginPath(); ctx.arc(p.x + p.width / 2, headY + 5, p.width / 2 - 2, Math.PI, 0); ctx.fill();
+    ctx.fillRect(p.x + 2, headY + 3, p.width - 4, 6);
+    ctx.fillStyle = darkColor; ctx.fillRect(p.x, headY + 4, 3, 5);
+    
+    ctx.save();
+    ctx.fillStyle = neonColor; ctx.shadowBlur = currentSkin !== -1 ? 12 : 5; ctx.shadowColor = neonColor;
+    ctx.fillRect(p.x + p.width - 14, headY + 3, 9, 4);
+    ctx.restore();
+
+    let wpnWobbleY = isMoving ? Math.cos(p.animTime * 1.5) * 1.8 : Math.sin(p.animTime) * 0.7;
+    let handX = p.x + 22;
+    let handY = bodyY + 7 + wpnWobbleY;
+
+    if (currentWeapon === -1) {
+        ctx.fillStyle = "#222"; ctx.fillRect(handX - 4, handY - 2, 18, 5); 
+    } else {
+        drawActualWeapon(ctx, handX, handY, currentWeapon, 1.25); 
+    }
+
+    ctx.fillStyle = darkColor; ctx.fillRect(handX - 3, handY - 3, 6, 6);
+    ctx.fillStyle = neonColor; ctx.fillRect(handX - 2, handY - 2, 4, 2);
+
+    ctx.restore();
+}
+
+function drawZombie(z) {
+    ctx.save();
+    if (z.dx < 0) {
+        ctx.translate(z.x + z.width / 2, z.y + z.height / 2); ctx.scale(-1, 1); ctx.translate(-(z.x + z.width / 2), -(z.y + z.height / 2));
+    }
+    z.animTime += 0.18 * dt;
+    let legSwing = Math.sin(z.animTime) * 8.5; let bodyBob = Math.sin(z.animTime * 1.4) * 2.5;
+
+    ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(z.x + z.width/2, z.y + z.height, 14, 4, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+    ctx.fillStyle = "#1a252f"; ctx.fillRect(z.x + 3 + legSwing, z.y + z.height - 7, 7, 7); ctx.fillRect(z.x + z.width - 10 - legSwing, z.y + z.height - 7, 7, 7);
+    ctx.fillStyle = "#2c3e50"; ctx.fillRect(z.x + 3 + legSwing, z.y + z.height - 22, 7, 15); ctx.fillRect(z.x + z.width - 10 - legSwing, z.y + z.height - 22, 7, 15);
+
+    let bodyY = z.y + 16 + bodyBob; 
+    let zombieFlesh = z.isKnight ? "#7f8c8d" : (z.isCaveZombie ? "#224422" : "#3b5e2b"); 
+    
+    ctx.fillStyle = zombieFlesh; ctx.fillRect(z.x + 2, bodyY, z.width - 4, 16);
+    if (z.isKnight) {
+        ctx.fillStyle = "#566573"; ctx.fillRect(z.x + 1, bodyY + 2, z.width - 2, 12);
+    } else {
+ctx.fillStyle = "#78281f"; ctx.fillRect(z.x + 4, bodyY + 5, 5, 6);
+    }
+
+    let headY = z.y + 3 + bodyBob;
+    ctx.fillStyle = zombieFlesh; ctx.fillRect(z.x + 6, headY, z.width - 12, 13);
+    
+    ctx.fillStyle = z.isKnight ? "#34495e" : "#51361a";
+    ctx.fillRect(z.x + 5, headY, z.width - 10, 3);
+
+    ctx.save(); 
+    ctx.fillStyle = z.isKnight ? "#00e5ff" : (z.isCaveZombie ? "#ffaa00" : "#ff2200"); ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(z.x + z.width - 12, headY + 4, 3, 3); 
+    ctx.restore();
+
+    let handX = z.x + z.width - 2;
+    let handY = bodyY + 4;
+    let strikeAngle = 0;
+
+    if (z.isAttacking) {
+        strikeAngle = Math.sin((z.attackTimer / 25) * Math.PI) * 1.4;
+    }
+
+    drawActualWeapon(ctx, handX, handY, null, 1.2, z.weaponType === 'axe', z.weaponType === 'sword', strikeAngle);
+    ctx.fillStyle = zombieFlesh; ctx.fillRect(handX - 2, handY - 2, 7, 5);
+
+    ctx.restore();
+}
+
+function drawRealisticForest(ctxX, camX) {
+    ctxX.save();
+    const baseColors = isNight ? 
+        ["#040905", "#081309", "#0e2010", "#142c16"] : 
+        ["#142516", "#1c3820", "#234c2b", "#2d6337"];
+
+    for (let layer = 0; layer < 4; layer++) {
+        ctxX.fillStyle = baseColors[layer];
+        let parallaxFactor = 0.15 + layer * 0.22; 
+        
+        forestLayers[layer].forEach(t => {
+            let pX = (t.x - camX * parallaxFactor);
+            if (pX < -150) t.x += levelWidth;
+            if (pX > 850) t.x -= levelWidth;
+            drawPineSilhouette(ctxX, pX, t.baseY, t.scale, t.layersCount);
+        });
+    }
+    ctxX.restore();
+}
+
+function drawPineSilhouette(ctxX, x, baseY, scale, layers) {
+    ctxX.save();
+    ctxX.translate(x, baseY);
+    ctxX.scale(scale, scale);
+    ctxX.fillRect(-3, -16, 6, 16);
+    let startY = -12; let width = 36;
+    for (let i = 0; i < layers; i++) {
+        ctxX.beginPath(); ctxX.moveTo(0, startY - 26); ctxX.lineTo(-width / 2, startY); ctxX.lineTo(width / 2, startY); ctxX.closePath(); ctxX.fill();
+        startY -= 15; width *= 0.83;
+    }
+    ctxX.restore();
+}
+
+function drawCastleParallax(ctxX, camX) {
+    ctxX.save();
+    const layerColorsNight = ["#070a0e", "#0f151d", "#18222f", "#212e3f"];
+    const layerColorsDay = ["#2c3e50", "#475b62", "#5e737a", "#788c94"];
+    const layerSpeeds = [0.1, 0.22, 0.4, 0.65];
+
+    for (let layer = 0; layer < 4; layer++) {
+        ctxX.fillStyle = isNight ? layerColorsNight[layer] : layerColorsDay[layer];
+        let speed = layerSpeeds[layer];
+
+        castleLayers[layer].forEach(castle => {
+            let cx = (castle.x - camX * speed);
+            if (cx < -200) castle.x += levelWidth;
+            if (cx > 850) castle.x -= levelWidth;
+
+            ctxX.fillRect(cx, 370 - castle.height, castle.width, castle.height);
+            ctxX.fillRect(cx, 370 - castle.height - 6, 8, 6);
+            ctxX.fillRect(cx + castle.width - 8, 370 - castle.height - 6, 8, 6);
+        });
+    }
+    ctxX.restore();
+}
+
+function drawGameBackground() {
+    ctx.save();
+    if (currentLevel === 1) {
+        if (!isNight) {
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height); 
+            skyGrad.addColorStop(0, "#2980b9"); skyGrad.addColorStop(0.5, "#6dd5fa"); skyGrad.addColorStop(1, "#a8ff78");
+            ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+            ctx.beginPath(); ctx.moveTo(300, 0); ctx.lineTo(50, 400); ctx.lineTo(220, 400); ctx.lineTo(420, 0); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(550, 0); ctx.lineTo(350, 400); ctx.lineTo(520, 400); ctx.lineTo(670, 0); ctx.fill();
+            drawRealisticForest(ctx, camera.x);
+        } else {
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height); 
+            skyGrad.addColorStop(0, "#010408"); skyGrad.addColorStop(0.8, "#0a1526");
+            ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = "rgba(255,255,255,0.6)";
+            backgroundStars.forEach(star => {
+                let sx = (star.x - camera.x * 0.1) % levelWidth; if (sx < 0) sx += levelWidth;
+                ctx.fillRect(sx, star.y, star.size, star.size);
+            });
+            ctx.fillStyle = "#f4f6f7"; ctx.shadowBlur = 30; ctx.shadowColor = "#5dade2"; 
+            ctx.beginPath(); ctx.arc(680, 60, 24, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+            drawRealisticForest(ctx, camera.x);
+        }
+
+        forestLeaves.forEach(leaf => {
+            leaf.x -= leaf.speedX * dt; leaf.y += leaf.speedY * dt; leaf.pulse += 0.02 * dt;
+            if (leaf.y > 380) { leaf.y = -10; leaf.x = Math.random() * levelWidth; }
+            let renderX = leaf.x - camera.x;
+            if (renderX >= 0 && renderX <= 800) {
+                ctx.save();
+                if (!isNight) { ctx.fillStyle = "rgba(39, 174, 96, 0.6)"; ctx.fillRect(renderX, leaf.y, leaf.size, leaf.size * 1.6); } 
+                else { ctx.fillStyle = "#ccff00"; ctx.shadowBlur = 12; ctx.shadowColor = "#ccff00"; ctx.globalAlpha = 0.3 + Math.sin(leaf.pulse) * 0.5; ctx.beginPath(); ctx.arc(renderX, leaf.y, leaf.size * 0.9, 0, Math.PI*2); ctx.fill(); }
+                ctx.restore();
+            }
+        });
+    } else if (currentLevel === 2) {
+        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        if (!isNight) {
+            skyGrad.addColorStop(0, "#34495e"); skyGrad.addColorStop(1, "#bdc3c7"); ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else {
+            skyGrad.addColorStop(0, "#010204"); skyGrad.addColorStop(0.85, "#1c2833"); ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            backgroundStars.forEach(star => {
+                let sx = (star.x - camera.x * 0.08) % levelWidth; if (sx < 0) sx += levelWidth;
+                ctx.fillRect(sx, star.y, star.size, star.size);
+            });
+        }
+        drawCastleParallax(ctx, camera.x);
+    } else if (currentLevel === 3) {
+        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        skyGrad.addColorStop(0, "#09090e"); skyGrad.addColorStop(1, "#141118");
+        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        drawCastleParallax(ctx, camera.x);
+
+        ctx.save();
+        ctx.fillStyle = "#d4af37"; ctx.shadowBlur = 15; ctx.shadowColor = "#ffd700";
+        for(let i=0; i<8; i++) {
+            let goldX = (3150 + i * 35 - camera.x);
+            if (goldX > -50 && goldX < 850) {
+                ctx.beginPath(); ctx.arc(goldX, 350, 15, 0, Math.PI, true); ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+    ctx.restore();
+}
+
+function drawRealisticPlatform(plat) {
+    let col = isNight ? adjustColorBrightness(plat.color, -35) : plat.color;
+    let gCol = plat.grassColor ? (isNight ? adjustColorBrightness(plat.grassColor, -35) : plat.grassColor) : null;
+
+    ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(plat.x + 6, plat.y + plat.height, plat.width, 8); ctx.restore();
+
+    let blockGrad = ctx.createLinearGradient(plat.x, plat.y, plat.x, plat.y + plat.height);
+    blockGrad.addColorStop(0, col); blockGrad.addColorStop(1, adjustColorBrightness(col, -25));
+    ctx.fillStyle = blockGrad; ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+
+    if (gCol) { ctx.fillStyle = gCol; ctx.fillRect(plat.x, plat.y, plat.width, 6); }
+    
+    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
+    for (let k = plat.x + 25; k < plat.x + plat.width; k += 35) {
+        ctx.beginPath(); ctx.moveTo(k, plat.y); ctx.lineTo(k, plat.y + plat.height); ctx.stroke();
+    }
+}
+
+function drawLaser(las) {
+    las.pulse += 0.08 * dt;
+    let thickness = 2 + Math.abs(Math.sin(las.pulse)) * 4;
+ctx.save(); ctx.fillStyle = "#222"; ctx.fillRect(las.x - 4, las.y - 4, 14, 8); ctx.fillRect(las.x - 4, las.y + las.height - 4, 14, 8);
+    ctx.shadowBlur = 18; ctx.shadowColor = "#ff0000"; ctx.fillStyle = "#ff3333"; ctx.fillRect(las.x + 3 - thickness/2, las.y, thickness, las.height);
+    ctx.restore();
+    if(Math.random() < 0.12) spawnParticle(las.x + 3, las.y + Math.random()*las.height, "#ff3333", 'laser');
+}
+
+function drawLava(lava) {
+    ctx.save();
+    let pulseGlow = 10 + Math.abs(Math.sin(performance.now() / 200)) * 10;
+    ctx.shadowBlur = pulseGlow; ctx.shadowColor = "#ff4500";
+    let lavaGrad = ctx.createLinearGradient(lava.x, lava.y, lava.x, lava.y + lava.height);
+    lavaGrad.addColorStop(0, "#ff3300"); lavaGrad.addColorStop(0.5, "#ff6600"); lavaGrad.addColorStop(1, "#990000");
+    ctx.fillStyle = lavaGrad;
+    ctx.fillRect(lava.x, lava.y, lava.width, lava.height);
+    ctx.restore();
+}
+
+function adjustColorBrightness(hex, percent) {
+    let R = parseInt(hex.substring(1,3),16); let G = parseInt(hex.substring(3,5),16); let B = parseInt(hex.substring(5,7),16);
+    R = parseInt(R * (100 + percent) / 100); R = R < 255 ? R : 255; R = R > 0 ? R : 0;
+    G = parseInt(G * (100 + percent) / 100); G = G < 255 ? G : 255; G = G > 0 ? G : 0;
+    B = parseInt(B * (100 + percent) / 100); B = B < 255 ? B : 255; B = B > 0 ? B : 0;
+    return "#" + ("0" + R.toString(16)).slice(-2) + ("0" + G.toString(16)).slice(-2) + ("0" + B.toString(16)).slice(-2);
+}
+
+function drawPortal(pt) {
+    ctx.save(); pt.pulse += 0.05 * dt; let glow = Math.sin(pt.pulse) * 6; 
+    let portalColor = currentLevel === 1 ? "#00ff88" : (currentLevel === 2 ? "#bd00ff" : "#00ffff"); 
+    ctx.shadowBlur = 25; ctx.shadowColor = portalColor; ctx.fillStyle = currentLevel === 1 ? "#00220a" : "#220033"; ctx.strokeStyle = portalColor; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(pt.x - glow/2, pt.y, pt.width + glow, pt.height, 12); ctx.fill(); ctx.stroke();
+    ctx.restore();
+}
+
+function checkPromoExpirations() {
+    let now = Date.now();
+    let updated = false;
+    weaponData.forEach(wpn => {
+        if (wpn.expiresAt && now > wpn.expiresAt) {
+            wpn.purchased = false; wpn.expiresAt = null;
+            if (currentWeapon === wpn.id) currentWeapon = -1;
+            updated = true;
+            alert(`Срок действия промокода на предмет "${wpn.name}" истёк!`);
+        }
+    });
+    if (updated) saveToArchive();
+}
+
+function switchScreen(screenId) {
+    document.getElementById("main-menu").style.display = "none"; document.getElementById("shop-menu").style.display = "none";
+    document.getElementById("promo-menu").style.display = "none"; document.getElementById("credits-menu").style.display = "none";
+    document.getElementById("ui-layer").style.display = "none";
+    document.getElementById(screenId).style.display = "flex";
+    if(screenId === 'shop-menu') { updateShopUI(); requestAnimationFrame(() => { renderShopPreviews(); }); }
+}
+
+function renderShopPreviews() {
+    shopData.forEach(skin => {
+        const previewCanvas = document.getElementById("ic-skin-" + skin.id);
+        if (!previewCanvas) return;
+        const cS = previewCanvas.getContext("2d");
+        cS.clearRect(0, 0, 75, 70); cS.fillStyle = skin.colors.dark; cS.fillRect(0,0,75,70);
+        cS.fillStyle = "rgba(255,255,255,0.06)"; cS.beginPath(); cS.arc(37,35,25,0,Math.PI*2); cS.fill();
+        cS.save(); cS.translate(21, 8); let primaryColor = skin.colors.base;
+        cS.fillStyle = primaryColor; cS.fillRect(4, 30, 8, 14); cS.fillRect(18, 30, 8, 14); cS.fillRect(1, 15, 28, 16); 
+        cS.fillStyle = skin.colors.dark; cS.fillRect(3, 16, 24, 14); cS.fillStyle = skin.colors.neon; cS.fillRect(6, 18, 2, 6); cS.fillRect(22, 18, 2, 6); 
+        cS.fillStyle = primaryColor; cS.beginPath(); cS.arc(15, 8, 8, Math.PI, 0); cS.fill(); cS.fillRect(7, 8, 16, 4); 
+        cS.fillStyle = skin.colors.neon; cS.fillRect(10, 8, 10, 3); cS.restore();
+    });
+const cKer = document.getElementById("preview-kerambit").getContext("2d");
+    if (cKer) { cKer.clearRect(0,0,75,70); cKer.fillStyle = "#0e1111"; cKer.fillRect(0,0,75,70); drawActualWeapon(cKer, 22, 35, 0, 1.4); }
+    const cBut = document.getElementById("preview-butterfly").getContext("2d");
+    if (cBut) { cBut.clearRect(0,0,75,70); cBut.fillStyle = "#0e1111"; cBut.fillRect(0,0,75,70); drawActualWeapon(cBut, 24, 35, 1, 1.4); }
+    const cGrad = document.getElementById("preview-gradient").getContext("2d");
+    if (cGrad) { cGrad.clearRect(0,0,75,70); cGrad.fillStyle = "#0e1111"; cGrad.fillRect(0,0,75,70); drawActualWeapon(cGrad, 20, 35, 2, 1.4); }
+}
+
+function startGame(lvl) {
+    initAudio(); checkPromoExpirations();
+    document.getElementById("main-menu").style.display = "none"; document.getElementById("ui-layer").style.display = "block"; 
+    document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+    isNight = false; applyDayNightUI();
+    loadLevelData(lvl);
+    floatingTexts = []; particles = []; dailyChest.chestMessage = ""; dailyChest.msgTimer = 0;
+    spawnLock = true; player.dx = 0; player.dy = 0;
+    keys.right = false; keys.left = false; keys.jump = false;
+    player.x = 50; player.y = 300; 
+    setTimeout(() => { spawnLock = false; }, 400);
+    isPlaying = true; lastTime = performance.now();
+}
+
+function returnToMenu() { isPlaying = false; switchScreen('main-menu'); }
+
+function handleGameOver() {
+    isPlaying = false; // Важно: останавливаем цикл рендеринга перед алертом, чтобы избежать фризов!
+    keys.right = false; keys.left = false; keys.jump = false;
+    playSound('hit');
+    GlobalCoins = Math.max(0, GlobalCoins - 15);
+    saveToArchive(); // Сохраняем потерю монет
+    alert("Вы пали в бою! Потеряно: -15 🪙"); 
+    startGame(currentLevel); 
+}
+
+function handleLevelComplete() {
+    isPlaying = false;
+    if (currentLevel === 1) {
+        alert("Уровень 1 (Чаща) успешно пройден! Переход в Каменное королевство... 🏰");
+        startGame(2);
+    } else if (currentLevel === 2) {
+        alert("Уровень 2 (Королевство) пройдено! Опускаемся в опасные шахты подземелья... 🔥");
+        startGame(3);
+    } else {
+        gameEndedState = true;
+        isPlaying = true; 
+    }
+}
+
+function openShop() { checkPromoExpirations(); switchScreen('shop-menu'); }
+
+function updateShopUI() {
+    document.getElementById("shop-balance-text").innerText = "Баланс: " + GlobalCoins + " 🪙";
+    shopData.forEach((skin) => {
+        const btn = document.getElementById("btn-skin-" + skin.id);
+        if (currentSkin === skin.id) { btn.innerText = "ВЫБРАНО"; btn.className = "buy-btn equipped"; } 
+        else if (skin.purchased) { btn.innerText = "ВЫБРАТЬ"; btn.className = "buy-btn owned"; } 
+        else { btn.innerText = "КУПИТЬ"; btn.className = "buy-btn"; }
+    });
+    weaponData.forEach((wpn) => {
+        const btn = document.getElementById("btn-weapon-" + wpn.id); const priceLabel = document.getElementById("price-weapon-" + wpn.id);
+        if (wpn.expiresAt) {
+            let minsLeft = Math.ceil((wpn.expiresAt - Date.now()) / 60000); priceLabel.innerText = `Времени: ${minsLeft} мин`;
+        } else { priceLabel.innerText = wpn.price + " 🪙"; }
+        if (currentWeapon === wpn.id) { btn.innerText = "В РУКАХ"; btn.className = "buy-btn equipped"; } 
+        else if (wpn.purchased) { btn.innerText = "ВЗЯТЬ"; btn.className = "buy-btn owned"; } 
+        else { btn.innerText = "КУПИТЬ"; btn.className = "buy-btn"; }
+    });
+}
+
+function buyOrSelectSkin(id) {
+    const skin = shopData[id];
+    if (skin.purchased) { currentSkin = id; } 
+    else if (GlobalCoins >= skin.price) { GlobalCoins -= skin.price; skin.purchased = true; currentSkin = id; } 
+    else { alert("Недостаточно монет!"); }
+    saveToArchive();
+    updateShopUI();
+}
+
+function handlePlatformCollisions(entity) {
+    entity.grounded = false;
+    for (let plat of platforms) {
+        if (checkCollision(entity, plat)) {
+let fromTop = (entity.y + entity.height - entity.dy * dt) <= plat.y + 4;
+            if (entity.dy >= 0 && fromTop) {
+                entity.y = plat.y - entity.height; entity.dy = 0; entity.grounded = true; continue;
+            }
+            if (entity.dx > 0 && (entity.x + entity.width - entity.dx * dt) <= plat.x + 2) {
+                entity.x = plat.x - entity.width;
+            } else if (entity.dx < 0 && (entity.x - entity.dx * dt) >= plat.x + plat.width - 2) {
+                entity.x = plat.x + plat.width;
+            }
+            if (entity.dy < 0 && (entity.y - entity.dy * dt) >= plat.y + plat.height - 4) {
+                entity.y = plat.y + plat.height; entity.dy = 0;
+            }
+        }
+    }
+}
+
+function buyOrSelectWeapon(id) {
+    checkPromoExpirations(); const wpn = weaponData[id];
+    if (wpn.purchased) { currentWeapon = id; } 
+    else if (GlobalCoins >= wpn.price) { GlobalCoins -= wpn.price; wpn.purchased = true; currentWeapon = id; } 
+    else { alert("Недостаточно монет!"); }
+    saveToArchive();
+    updateShopUI();
+}
+
+function activatePromoCode() {
+    const input = document.getElementById("promo-code-input"); const code = input.value.trim().toUpperCase(); 
+    if (code === "") return; if (usedPromos.includes(code)) { alert("Этот промокод уже использован!"); return; }
+    let oneHour = 60 * 60 * 1000; 
+
+    if (code === "KNIFEGREEN") {
+        weaponData[0].purchased = true; weaponData[0].expiresAt = Date.now() + oneHour; currentWeapon = 0; usedPromos.push(code);
+        alert("Керамбит Изумруд получен на 1 час!");
+    } else if (code === "BATERFLIP189" || code === "SAPPHIRE") {
+        weaponData[1].purchased = true; weaponData[1].expiresAt = Date.now() + oneHour; currentWeapon = 1; usedPromos.push(code);
+        alert("Сапфировый Меч получен на 1 час!");
+    } else if (code === "GAMAJORIK") {
+        weaponData[2].purchased = true; weaponData[2].expiresAt = Date.now() + oneHour; currentWeapon = 2; usedPromos.push(code);
+        alert("Штурмовой Градиент получен на 1 час!");
+    } else if (code === "DIAMOND136") {
+        shopData[2].purchased = true; currentSkin = 2; usedPromos.push(code);
+        alert("Получен скин Кристалл Кибер! 💎");
+    } else if (code === "MAJORITO") {
+        GlobalCoins += 5000; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+        alert("Начислено +5000 монет! 💰");
+    } else if (code === "COIN777") {
+        GlobalCoins += 777; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+        alert("Получено +777 монет!");
+    } else { alert("Неверный промокод."); return;}
+    
+    saveToArchive();
+    input.value = ""; if(document.getElementById("shop-menu").style.display === "flex") { updateShopUI(); }
+}
+
+function update(currentTime) {
+    let elapsed = currentTime - lastTime; lastTime = currentTime;
+    if (elapsed > 100) elapsed = 16.66;
+    dt = elapsed / (1000 / TARGET_FPS);
+
+    if (isPlaying && !gameEndedState) {
+        if (!spawnLock) {
+            if (keys.right) player.dx = player.speed;
+            else if (keys.left) player.dx = -player.speed;
+            else player.dx = 0;
+
+            if (keys.jump && player.grounded) { 
+                player.dy = player.jumpPower; player.grounded = false; playSound('jump');
+                for(let k=0; k<5; k++) spawnParticle(player.x + player.width/2, player.y + player.height, "rgba(255,255,255,0.3)", 'dust');
+            }
+        } else { player.dx = 0; }
+
+        player.dy += GLOBAL_GRAVITY * dt;
+        player.x += player.dx * dt; player.y += player.dy * dt;
+
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > levelWidth) player.x = levelWidth - player.width;
+        
+        if (player.y > canvas.height + 100) { handleGameOver(); requestAnimationFrame(update); return; }
+        for (let lava of lavaZones) {
+if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(update); return; }
+        }
+
+        handlePlatformCollisions(player);
+
+        camera.x = player.x - camera.width / 2;
+        camera.x = Math.max(0, Math.min(camera.x, levelWidth - camera.width));
+
+        if (checkCollision(player, portal)) { handleLevelComplete(); requestAnimationFrame(update); return; }
+        for (let las of lasers) { if (checkCollision(player, las)) { handleGameOver(); requestAnimationFrame(update); return; } }
+
+        coins.forEach((coin) => {
+            coin.pulse += 0.1 * dt;
+            if (!coin.collected && checkCollision(player, { x: coin.x, y: coin.y, width: 20, height: 20 })) {
+                coin.collected = true; GlobalCoins += 50; playSound('coin');
+                saveToArchive(); // Сохраняем баланс при подборе монеты
+                document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+                floatingTexts.push({ x: coin.x + 5, y: coin.y, alpha: 1, timer: 40 });
+                for(let k=0; k<8; k++) spawnParticle(coin.x + 10, coin.y + 10, "#fcb434", 'laser');
+            }
+        });
+
+        if (dailyChest.msgTimer > 0) dailyChest.msgTimer -= dt;
+
+        floatingTexts.forEach((txt, idx) => {
+            txt.y -= 1.5 * dt; txt.alpha -= 0.025 * dt; txt.timer -= dt;
+            if (txt.timer <= 0) floatingTexts.splice(idx, 1);
+        });
+
+        particles.forEach((p, idx) => {
+            p.x += p.vx * dt; p.y += p.vy * dt; p.alpha -= 0.03 * dt; p.life -= dt;
+            if(p.life <= 0 || p.alpha <= 0) particles.splice(idx, 1);
+        });
+
+        for (let i = 0; i < zombies.length; i++) {
+            let z = zombies[i];
+            let distanceToPlayer = Math.abs(player.x - z.x);
+            let verticalDist = Math.abs(player.y - z.y);
+
+            if (z.isCaveZombie) {
+                let checkAheadX = z.x + (z.dx > 0 ? z.width + 10 : -10);
+                let nextStepRect = { x: z.x + z.dx * dt, y: z.y, width: z.width, height: z.height };
+                
+                let lavaAhead = false;
+                for (let lava of lavaZones) {
+                    if (checkCollision(nextStepRect, lava)) lavaAhead = true;
+                }
+
+                let platformAhead = false;
+                let testFloorRect = { x: checkAheadX, y: z.y + z.height + 2, width: 10, height: 5 };
+                for (let plat of platforms) {
+                    if (checkCollision(testFloorRect, plat)) platformAhead = true;
+                }
+
+                if (lavaAhead || (!platformAhead && z.grounded)) {
+                    z.dx = -z.dx;
+                }
+
+                if (distanceToPlayer < 200 && verticalDist < 60 && !lavaAhead) {
+                    z.dx = player.x > z.x ? Math.abs(z.speed) : -Math.abs(z.speed);
+                }
+                
+                if (distanceToPlayer < 45 && !z.isAttacking) {
+                    z.isAttacking = true; z.attackTimer = 0; playSound('slash');
+                }
+            } else {
+                if (distanceToPlayer < 260 && verticalDist < 100) {
+                    z.dx = player.x > z.x ? z.speed : -z.speed;
+                    if (distanceToPlayer < 45 && !z.isAttacking) { z.isAttacking = true; z.attackTimer = 0; playSound('slash'); }
+                } else {
+                    if (!z.dx) z.dx = z.speed;
+                    if (z.x <= z.minX) z.dx = z.speed;
+                    if (z.x >= z.maxX) z.dx = -z.speed;
+                }
+            }
+
+            if (z.isAttacking) {
+                z.attackTimer += 1 * dt;
+                if (z.attackTimer >= 12 && z.attackTimer <= 14) {
+                    if (distanceToPlayer < 40 && verticalDist < 30) { handleGameOver(); return; }
+                }
+                if (z.attackTimer >= 25) z.isAttacking = false;
+            }
+
+            z.dy += GLOBAL_GRAVITY * dt;
+            z.x += z.dx * dt; z.y += z.dy * dt;
+
+            handlePlatformCollisions(z);
+if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random() < 0.025 * dt && !z.isCaveZombie) {
+                z.dy = z.jumpPower; z.grounded = false;
+            }
+
+            if (checkCollision(player, z)) {
+                if (player.dy > 0 && player.y + player.height - player.dy * dt <= z.y + 15) {
+                    player.dy = player.jumpPower / 1.3; playSound('hit');
+                    let particleColor = z.isKnight ? "#90a4ae" : (z.isCaveZombie ? "#2d6337" : "#4caf50");
+                    for(let k=0; k<12; k++) spawnParticle(z.x + z.width/2, z.y + z.height/2, particleColor, 'laser');
+                    zombies.splice(i, 1); i--;
+                } else if (!z.isAttacking) { 
+                    handleGameOver(); return; 
+                }
+            }
+        }
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGameBackground();
+
+    ctx.save(); ctx.translate(-camera.x, 0);
+
+    for (let lava of lavaZones) drawLava(lava);
+    for (let plat of platforms) drawRealisticPlatform(plat);
+    for (let las of lasers) drawLaser(las);
+
+    particles.forEach(p => {
+        ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
+    });
+
+    coins.forEach((coin) => {
+        if (!coin.collected) {
+            ctx.save(); ctx.shadowBlur = 12; ctx.shadowColor = "#fcb434"; ctx.fillStyle = "#fcb434"; ctx.strokeStyle = "#fff";
+            let yOffset = Math.sin(coin.pulse) * 4;
+            ctx.beginPath(); ctx.arc(coin.x + 10, coin.y + 10 + yOffset, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+    });
+
+    if (currentLevel === 3) {
+        ctx.save();
+        ctx.fillStyle = "#8b5a2b"; ctx.strokeStyle = "#cd7f32"; ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 10; ctx.shadowColor = "#ffaa00";
+        ctx.beginPath(); ctx.roundRect(dailyChest.x, dailyChest.y, dailyChest.width, dailyChest.height, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fcb434"; ctx.fillRect(dailyChest.x + dailyChest.width/2 - 4, dailyChest.y + 14, 8, 10);
+        ctx.restore();
+
+        if (Math.abs(player.x - dailyChest.x) < 80) {
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial";
+            ctx.fillText("КЛАВИША [E]", dailyChest.x - 8, dailyChest.y - 12);
+        }
+    }
+
+    drawPortal(portal);
+    zombies.forEach(drawZombie);
+    drawSoldier(player);
+
+    ctx.restore();
+    if(isNight && isPlaying && !gameEndedState) { ctx.fillStyle = "rgba(4, 4, 18, 0.22)"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    
+    if (dailyChest.msgTimer > 0 && dailyChest.chestMessage !== "") {
+        ctx.fillStyle = "#fcb434"; ctx.font = "bold 18px Arial"; ctx.textAlign = "center";
+        ctx.fillText(dailyChest.chestMessage, canvas.width / 2, 90);
+    }
+
+    if (gameEndedState) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ff3333"; ctx.font = "black 38px Impact"; ctx.textAlign = "center";
+        ctx.fillText("В РАЗРАБОТКЕ...", canvas.width / 2, canvas.height / 2);
+        ctx.fillStyle = "#fff"; ctx.font = "14px Arial";
+        ctx.fillText("Вы успешно зачистили пещеры подземелья!", canvas.width / 2, canvas.height / 2 + 40);
+        
+        ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "bold 12px Arial";
+        ctx.fillText("НАЖМИ 'МЕНЮ' ЧТОБЫ ВЫЙТИ", canvas.width / 2, canvas.height - 30);
+    }
+
+    requestAnimationFrame(update);
+}
+
+setInterval(checkPromoExpirations, 5000);
+requestAnimationFrame(update);
+</script>
+
+</body>
+</html>
