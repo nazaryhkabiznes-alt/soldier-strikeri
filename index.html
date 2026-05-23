@@ -364,7 +364,6 @@ width: 98%;
         }
         .promo-submit-btn:hover { background: linear-gradient(#2ecc71, #229954); }
 
-        /* Стили для окон архивации */
         .archive-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -450,7 +449,7 @@ width: 98%;
                 <div class="crystal right"></div>
             </div>
 
-            <div class="game-version-label">v1.3.0-SAPPHIRE</div>
+            <div class="game-version-label">v1.3.1-SAPPHIRE</div>
             <div class="archive-status-label" id="menu-archive-label">АКТИВНЫЙ АРХИВ: СЛОТ 1</div>
         </div>
 
@@ -542,14 +541,12 @@ let currentSkin = -1;
 let currentWeapon = -1; 
 let isNight = false;
 let currentLevel = 1; 
-let currentArchiveSlot = null; // Номер текущей архивации (1, 2, 3...)
+let currentArchiveSlot = null;
 
-// ДЕЛЬТА ТАЙМЕР
 let lastTime = performance.now();
 let dt = 0;
 const TARGET_FPS = 60;
 
-// ЗВУКОВОЙ ДВИЖОК
 let audioCtx = null;
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -601,7 +598,6 @@ const weaponData = [
     { id: 2, name: "Штурмовой Градиент", price: 100000, purchased: false, expiresAt: null }
 ];
 
-// ================= ФУНКЦИИ АРХИВАЦИИ И СОХРАНЕНИЯ =================
 function saveToArchive() {
     if (!currentArchiveSlot) return;
     const saveData = {
@@ -611,16 +607,19 @@ function saveToArchive() {
         purchasedSkins: shopData.map(s => s.purchased),
         purchasedWeapons: weaponData.map(w => w.purchased)
     };
-    localStorage.setItem("ss_archive_slot_" + currentArchiveSlot, JSON.stringify(saveData));
+    try {
+        localStorage.setItem("ss_archive_slot_" + currentArchiveSlot, JSON.stringify(saveData));
+    } catch (e) {
+        console.warn("Ошибка сохранения: хранилище недоступно.", e);
+    }
 }
 
 function loadFromArchive(slot) {
     currentArchiveSlot = slot;
     document.getElementById("menu-archive-label").innerText = "АКТИВНЫЙ АРХИВ: СЛОТ " + slot;
-    const rawData = localStorage.getItem("ss_archive_slot_" + slot);
-    
-    if (rawData) {
-        try {
+    try {
+        const rawData = localStorage.getItem("ss_archive_slot_" + slot);
+        if (rawData) {
             const loadData = JSON.parse(rawData);
             GlobalCoins = loadData.coins || 0;
             currentSkin = loadData.currentSkin !== undefined ? loadData.currentSkin : -1;
@@ -632,38 +631,29 @@ function loadFromArchive(slot) {
             if (loadData.purchasedWeapons) {
                 loadData.purchasedWeapons.forEach((p, idx) => { if (weaponData[idx]) weaponData[idx].purchased = p; });
             }
-        } catch(e) {
-            console.error("Ошибка загрузки архива", e);
+        } else {
             resetArchiveState();
         }
-    } else {
-        // Если слот пустой, сбрасываем состояние на дефолт для нового архива
+    } catch(e) {
+        console.error("Ошибка загрузки архива", e);
         resetArchiveState();
     }
 }
 
 function resetArchiveState() {
-    GlobalCoins = 0;
-    currentSkin = -1;
-    currentWeapon = -1;
-    shopData.forEach(s => s.purchased = false);
-    weaponData.forEach(w => w.purchased = false);
+    GlobalCoins = 0; currentSkin = -1; currentWeapon = -1;
+    shopData.forEach(s => s.purchased = false); weaponData.forEach(w => w.purchased = false);
 }
 
 function selectArchiveSlot(slot) {
-    initAudio();
-    loadFromArchive(slot);
-    document.getElementById("archive-menu").style.display = "none";
-    document.getElementById("main-menu").style.display = "flex";
+    initAudio(); loadFromArchive(slot);
+    document.getElementById("archive-menu").style.display = "none"; document.getElementById("main-menu").style.display = "flex";
 }
 
 function exitCurrentArchive() {
-    saveToArchive(); // Сохраняем перед выходом
-    currentArchiveSlot = null;
-    document.getElementById("main-menu").style.display = "none";
-    document.getElementById("archive-menu").style.display = "flex";
+    saveToArchive(); currentArchiveSlot = null;
+    document.getElementById("main-menu").style.display = "none"; document.getElementById("archive-menu").style.display = "flex";
 }
-// =================================================================
 
 let usedPromos = [];
 const camera = { x: 0, width: 800 };
@@ -671,22 +661,14 @@ let levelWidth = 3600;
 const GLOBAL_GRAVITY = 0.6;
 
 const player = {
-    x: 50, y: 300, width: 34, height: 52,
-    speed: 5.2, dx: 0, dy: 0,
-    jumpPower: -12.8, grounded: false, 
-    direction: "right", animTime: 0
+    x: 50, y: 300, width: 34, height: 52, speed: 5.2, dx: 0, dy: 0,
+    jumpPower: -12.8, grounded: false, direction: "right", animTime: 0
 };
 
-let particles = [];
-let forestLeaves = []; 
+let particles = []; let forestLeaves = []; 
 
-const dailyChest = {
-    x: 3100, y: 320, width: 50, height: 40,
-    cooldown: 24 * 60 * 60 * 1000, 
-    chestMessage: "",
-    msgTimer: 0
-};
-
+// Настройки сундука
+const dailyChest = { x: 5000, y: 320, width: 54, height: 42, cooldown: 24 * 60 * 60 * 1000, chestMessage: "", msgTimer: 0 };
 let gameEndedState = false; 
 
 function spawnParticle(x, y, color, type) {
@@ -696,70 +678,43 @@ function spawnParticle(x, y, color, type) {
             x: x, y: y,
             vx: (Math.random() - 0.5) * (type === 'laser' ? 5 : 2),
             vy: type === 'laser' ? (Math.random() - 0.5) * 5 : -Math.random() * 2,
-            size: Math.random() * 3.5 + 1,
-            color: color,
-            alpha: 1,
-            life: Math.random() * 25 + 15
+            size: Math.random() * 3.5 + 1, color: color, alpha: 1, life: Math.random() * 25 + 15
         });
     }
 }
 
 for (let i = 0; i < 70; i++) {
-    forestLeaves.push({
-        x: Math.random() * 3600,
-        y: Math.random() * 350,
-        size: Math.random() * 3 + 1.5,
-        speedX: (Math.random() - 0.5) * 0.8,
-speedY: Math.random() * 0.5 + 0.3,
-        pulse: Math.random() * Math.PI
-    });
+    forestLeaves.push({ x: Math.random() * 5500, y: Math.random() * 350, size: Math.random() * 3 + 1.5, speedX: (Math.random() - 0.5) * 0.8, speedY: Math.random() * 0.5 + 0.3, pulse: Math.random() * Math.PI });
 }
 
 const backgroundStars = [];
-for(let i=0; i<120; i++) {
-    backgroundStars.push({ x: Math.random() * 3600, y: Math.random() * 180, size: Math.random() * 1.8 + 0.5 });
-}
+for(let i=0; i<120; i++) { backgroundStars.push({ x: Math.random() * 5500, y: Math.random() * 180, size: Math.random() * 1.8 + 0.5 }); }
 
 const forestLayers = [[], [], [], []];
 for (let layer = 0; layer < 4; layer++) {
     let count = 25 + layer * 15; 
     for (let i = 0; i < count; i++) {
-        forestLayers[layer].push({
-            x: Math.random() * 3800,
-            baseY: 375,
-            scale: (0.4 + layer * 0.25) * (Math.random() * 0.3 + 0.85),
-            layersCount: Math.floor(Math.random() * 2) + 4 + layer, 
-            opacity: 0.15 + layer * 0.25
-        });
+        forestLayers[layer].push({ x: Math.random() * 5500, baseY: 375, scale: (0.4 + layer * 0.25) * (Math.random() * 0.3 + 0.85), layersCount: Math.floor(Math.random() * 2) + 4 + layer, opacity: 0.15 + layer * 0.25 });
     }
 }
 
 const castleLayers = [[], [], [], []];
 for (let layer = 0; layer < 4; layer++) {
     let count = 12 + layer * 5;
-    for (let i = 0; i < count; i++) {
-        castleLayers[layer].push({
-            x: Math.random() * 3800,
-            width: 50 + Math.random() * 60,
-            height: 90 + layer * 40 + Math.random() * 50
-        });
-    }
+    for (let i = 0; i < count; i++) { castleLayers[layer].push({ x: Math.random() * 5500, width: 50 + Math.random() * 60, height: 90 + layer * 40 + Math.random() * 50 }); }
 }
 
 let platforms = []; let lasers = []; let coins = []; let zombies = []; let floatingTexts = []; let lavaZones = [];
-const portal = { x: 3450, y: 190, width: 30, height: 80, pulse: 0 };
+const portal = { x: 5350, y: 190, width: 30, height: 80, pulse: 0 };
 
 function loadLevelData(lvl) {
     currentLevel = lvl;
-    let title = "1 (Густая Чаща)";
-    if (lvl === 2) title = "2 (Королевство Камня)";
-    if (lvl === 3) title = "3 (Пещеры Подземелья)";
+    let title = "1 (Густая Чаща)"; if (lvl === 2) title = "2 (Королевство Камня)"; if (lvl === 3) title = "3 (Пещеры Подземелья)";
     document.getElementById("level-indicator").innerText = "УРОВЕНЬ: " + title;
-    levelWidth = 3600;
-    lavaZones = [];
-    gameEndedState = false;
+    lavaZones = []; gameEndedState = false;
 
     if (lvl === 1) {
+        levelWidth = 3600;
         portal.x = 3460; portal.y = 190;
         platforms = [
             { x: 0, y: 370, width: 450, height: 30, color: "#3d2b1f", grassColor: "#27ae60" },  
@@ -782,17 +737,13 @@ function loadLevelData(lvl) {
             { x: 3450, y: 270, width: 55, height: 100, color: "#2d1f16", grassColor: "#14300b" }   
         ];
         lasers = [
-            { x: 380, y: 325, width: 6, height: 45, pulse: 0 },
-            { x: 1080, y: 295, width: 6, height: 45, pulse: 2 },
-            { x: 1300, y: 295, width: 6, height: 45, pulse: 1 },
-            { x: 2020, y: 165, width: 6, height: 45, pulse: 0 },
-            { x: 2220, y: 255, width: 6, height: 45, pulse: 2 },
-            { x: 2820, y: 195, width: 6, height: 45, pulse: 1.5 }
+            { x: 380, y: 325, width: 6, height: 45, pulse: 0 }, { x: 1080, y: 295, width: 6, height: 45, pulse: 2 }, { x: 1300, y: 295, width: 6, height: 45, pulse: 1 },
+            { x: 2020, y: 165, width: 6, height: 45, pulse: 0 }, { x: 2220, y: 255, width: 6, height: 45, pulse: 2 }, { x: 2820, y: 195, width: 6, height: 45, pulse: 1.5 }
         ];
         zombies = [
-{ isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 530,  y: 200, width: 34, height: 52, speed: 1.6, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 0, minX: 520, maxX: 620 },
+            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 530,  y: 200, width: 34, height: 52, speed: 1.6, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 0, minX: 520, maxX: 620 },
             { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 730,  y: 130, width: 34, height: 52, speed: 1.8, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 1, minX: 720, maxX: 800 },
-            { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1060, y: 230, width: 34, height: 52, speed: 2.0, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 1.5, minX: 1050, maxX: 1250 },
+{ isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1060, y: 230, width: 34, height: 52, speed: 2.0, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 1.5, minX: 1050, maxX: 1250 },
             { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1180, y: 130, width: 34, height: 52, speed: 2.2, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 2, minX: 1150, maxX: 1250 },
             { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1810, y: 50,  width: 34, height: 52, speed: 1.7, dx: 0, dy: 0, jumpPower: -10.5, grounded: false, animTime: 0.5, minX: 1800, maxX: 1890 },
             { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2160, y: 150, width: 34, height: 52, speed: 2.1, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 3, minX: 2150, maxX: 2290 },
@@ -801,6 +752,7 @@ function loadLevelData(lvl) {
             { isCaveZombie: false, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3280, y: 250, width: 34, height: 52, speed: 2.5, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 4.5, minX: 3260, maxX: 3420 }
         ];
     } else if (lvl === 2) {
+        levelWidth = 3600;
         portal.x = 3450; portal.y = 220;
         platforms = [
             { x: 0, y: 370, width: 320, height: 30, color: "#34495e", grassColor: "#566573" },
@@ -819,52 +771,78 @@ function loadLevelData(lvl) {
             { x: 2990, y: 140, width: 75, height: 20, color: "#2c3e50", grassColor: "" },
             { x: 3180, y: 300, width: 420, height: 100, color: "#1c2833", grassColor: "#465665" }
         ];
-        lasers = [
-            { x: 960, y: 215, width: 6, height: 45, pulse: 1 },
-            { x: 2080, y: 195, width: 6, height: 45, pulse: 0 },
-            { x: 2300, y: 195, width: 6, height: 45, pulse: 2 }
-        ];
+        lasers = [ { x: 960, y: 215, width: 6, height: 45, pulse: 1 }, { x: 2080, y: 195, width: 6, height: 45, pulse: 0 }, { x: 2300, y: 195, width: 6, height: 45, pulse: 2 } ];
         zombies = [
-{ isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 940,  y: 150, width: 34, height: 52, speed: 1.5, dx: 0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0, minX: 910, maxX: 1120 },
+            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 940,  y: 150, width: 34, height: 52, speed: 1.5, dx: 0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0, minX: 910, maxX: 1120 },
             { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 1690, y: 200, width: 34, height: 52, speed: 1.9, dx: 0, dy: 0, jumpPower: -12.0, grounded: false, animTime: 1, minX: 1670, maxX: 1840 },
-            { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 2020, y: 150, width: 34, height: 52, speed: 2.1, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 2, minX: 2000, maxX: 2200 },
+{ isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 2020, y: 150, width: 34, height: 52, speed: 2.1, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 2, minX: 2000, maxX: 2200 },
             { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 2240, y: 150, width: 34, height: 52, speed: 1.7, dx: 0, dy: 0, jumpPower: -11.5, grounded: false, animTime: 3, minX: 2200, maxX: 2420 },
             { isCaveZombie: false, isKnight: true, weaponType: 'sword', attackTimer: 0, isAttacking: false, x: 3250, y: 200, width: 34, height: 52, speed: 2.3, dx: 0, dy: 0, jumpPower: -12.0, grounded: false, animTime: 4, minX: 3200, maxX: 3380 }
         ];
     } else if (lvl === 3) {
-        portal.x = 3450; portal.y = 280;
+        // ХАРДКОРНОЕ ПОДЗЕМЕЛЕ Nazaros2009
+        levelWidth = 5500; // Карта значительно увеличена
+        portal.x = 5350; portal.y = 260;
+        dailyChest.x = 5000; dailyChest.y = 310;
+
         platforms = [
-            { x: 0, y: 370, width: 600, height: 30, color: "#1f1f2e", grassColor: "" },
-            { x: 750, y: 300, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 1000, y: 230, width: 120, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 1250, y: 310, width: 160, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 1550, y: 240, width: 100, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 1800, y: 290, width: 220, height: 110, color: "#1f1f2e", grassColor: "" },
-            { x: 2150, y: 220, width: 130, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 2400, y: 160, width: 120, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 2650, y: 250, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
-            { x: 2950, y: 360, width: 650, height: 40, color: "#1f1f2e", grassColor: "" }
-        ];
-        
-        lavaZones = [
-            { x: 600, y: 385, width: 1200, height: 20 },
-            { x: 2020, y: 385, width: 930, height: 20 }
-        ];
-
-        lasers = [
-            { x: 300, y: 325, width: 6, height: 45, pulse: 0 },
-            { x: 1900, y: 245, width: 6, height: 45, pulse: 1.5 }
+            { x: 0, y: 370, width: 550, height: 30, color: "#1f1f2e", grassColor: "" },
+            { x: 700, y: 290, width: 150, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1000, y: 220, width: 130, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1250, y: 300, width: 180, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1550, y: 230, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 1850, y: 290, width: 300, height: 110, color: "#1f1f2e", grassColor: "" },
+            { x: 2300, y: 220, width: 150, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 2600, y: 150, width: 140, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 2900, y: 240, width: 200, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 3250, y: 310, width: 250, height: 90, color: "#1f1f2e", grassColor: "" },
+            { x: 3650, y: 230, width: 150, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 3950, y: 160, width: 130, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 4200, y: 250, width: 180, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 4550, y: 320, width: 200, height: 20, color: "#2d2d3f", grassColor: "" },
+            { x: 4900, y: 350, width: 600, height: 40, color: "#1f1f2e", grassColor: "" }
         ];
 
+        // Опасные зоны лавы
+        lavaZones = [ 
+            { x: 550, y: 385, width: 1300, height: 20 }, 
+            { x: 2150, y: 385, width: 1100, height: 20 },
+            { x: 3500, y: 385, width: 1400, height: 20 }
+        ];
+
+        // Больше лазеров для хардкора
+        lasers = [ 
+            { x: 300, y: 325, width: 6, height: 45, pulse: 0 }, 
+            { x: 1350, y: 255, width: 6, height: 45, pulse: 1 }, 
+            { x: 2000, y: 245, width: 6, height: 45, pulse: 1.5 },
+            { x: 2980, y: 195, width: 6, height: 45, pulse: 0.5 },
+            { x: 3400, y: 265, width: 6, height: 45, pulse: 2 },
+            { x: 4300, y: 205, width: 6, height: 45, pulse: 1.2 }
+        ];
+
+        // Огромная армия зомби (14 штук!)
         zombies = [
-            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 250, y: 300, width: 34, height: 52, speed: 1.4, dx: 1.4, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0 },
-            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1850, y: 220, width: 34, height: 52, speed: 1.8, dx: 1.8, dy: 0, jumpPower: -11.0, grounded: false, animTime: 2 },
-            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3050, y: 290, width: 34, height: 52, speed: 2.0, dx: 2.0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 4 }
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 200, y: 300, width: 34, height: 52, speed: 1.5, dx: 1.5, dy: 0, jumpPower: -11.0, grounded: false, animTime: 0 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 400, y: 300, width: 34, height: 52, speed: 1.7, dx: 1.7, dy: 0, jumpPower: -11.0, grounded: false, animTime: 1 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 720, y: 220, width: 34, height: 52, speed: 2.0, dx: 2.0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 2 },
+{ isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1020, y: 150, width: 34, height: 52, speed: 1.8, dx: 1.8, dy: 0, jumpPower: -11.0, grounded: false, animTime: 3 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1280, y: 220, width: 34, height: 52, speed: 2.1, dx: 2.1, dy: 0, jumpPower: -11.0, grounded: false, animTime: 4 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 1900, y: 220, width: 34, height: 52, speed: 1.9, dx: 1.9, dy: 0, jumpPower: -11.0, grounded: false, animTime: 5 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2050, y: 220, width: 34, height: 52, speed: 2.3, dx: 2.3, dy: 0, jumpPower: -11.0, grounded: false, animTime: 6 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2320, y: 140, width: 34, height: 52, speed: 2.2, dx: 2.2, dy: 0, jumpPower: -11.0, grounded: false, animTime: 7 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 2950, y: 170, width: 34, height: 52, speed: 2.0, dx: 2.0, dy: 0, jumpPower: -11.0, grounded: false, animTime: 8 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3300, y: 240, width: 34, height: 52, speed: 2.5, dx: 2.5, dy: 0, jumpPower: -11.0, grounded: false, animTime: 9 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 3700, y: 150, width: 34, height: 52, speed: 2.4, dx: 2.4, dy: 0, jumpPower: -11.0, grounded: false, animTime: 10 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 4250, y: 180, width: 34, height: 52, speed: 2.1, dx: 2.1, dy: 0, jumpPower: -11.0, grounded: false, animTime: 11 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 4600, y: 250, width: 34, height: 52, speed: 2.6, dx: 2.6, dy: 0, jumpPower: -11.0, grounded: false, animTime: 12 },
+            { isCaveZombie: true, isKnight: false, weaponType: 'axe', attackTimer: 0, isAttacking: false, x: 5100, y: 280, width: 34, height: 52, speed: 2.5, dx: 2.5, dy: 0, jumpPower: -11.0, grounded: false, animTime: 13 }
         ];
     }
 
+    // Спавн монет в зависимости от длины уровня
     coins = [];
-    for (let i = 0; i < (lvl === 1 ? 25 : 30); i++) {
+    let coinCount = lvl === 3 ? 50 : (lvl === 1 ? 25 : 30);
+    for (let i = 0; i < coinCount; i++) {
         let randomPlat = platforms[Math.floor(Math.random() * (platforms.length - 1)) + 1];
         let coinX = randomPlat.x + Math.random() * (randomPlat.width - 22);
         let coinY = randomPlat.y - 35 - (Math.random() * 45); 
@@ -877,15 +855,12 @@ const keys = { right: false, left: false, jump: false };
 window.addEventListener("keydown", (e) => {
     if (document.activeElement === document.getElementById("promo-code-input")) return;
     initAudio(); 
-    if (!isPlaying || spawnLock) return;
-if (e.code === "ArrowRight" || e.code === "KeyD") { keys.right = true; player.direction = "right"; }
+    if (!isPlaying || spawnLock) return; 
+    if (e.code === "ArrowRight" || e.code === "KeyD") { keys.right = true; player.direction = "right"; }
     if (e.code === "ArrowLeft" || e.code === "KeyA") { keys.left = true; player.direction = "left"; }
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = true;
     
-    if (e.code === "KeyE" && currentLevel === 3) {
-        tryOpenDailyChest();
-    }
-    
+    if (e.code === "KeyE" && currentLevel === 3) { tryOpenDailyChest(); }
     if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
 });
 
@@ -894,7 +869,6 @@ window.addEventListener("keyup", (e) => {
     if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = false;
 });
-
 function tryOpenDailyChest() {
     let dist = Math.abs((player.x + player.width/2) - (dailyChest.x + dailyChest.width/2));
     let vDist = Math.abs((player.y + player.height/2) - (dailyChest.y + dailyChest.height/2));
@@ -902,19 +876,15 @@ function tryOpenDailyChest() {
         let lastOpened = localStorage.getItem("ss_chest_last_opened_" + currentArchiveSlot) || 0;
         let now = Date.now();
         if (now - lastOpened >= dailyChest.cooldown) {
-            localStorage.setItem("ss_chest_last_opened_" + currentArchiveSlot, now);
-            GlobalCoins += 10000;
-            playSound('coin');
-            saveToArchive(); // Сохраняем монеты
+            try { localStorage.setItem("ss_chest_last_opened_" + currentArchiveSlot, now); } catch(e){}
+            GlobalCoins += 10000; playSound('coin'); saveToArchive();
             document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
-            dailyChest.chestMessage = "УСПЕХ! +10,000 МОНЕТ!";
-            dailyChest.msgTimer = 180;
+            dailyChest.chestMessage = "УСПЕХ! +10,000 МОНЕТ!"; dailyChest.msgTimer = 180;
         } else {
             let timeLeft = dailyChest.cooldown - (now - lastOpened);
             let hours = Math.floor(timeLeft / (3600 * 1000));
             let mins = Math.floor((timeLeft % (3600 * 1000)) / (60 * 1000));
-            dailyChest.chestMessage = `ПУСТО. ПРИХОДИ ЧЕРЕЗ ${hours}Ч ${mins}М`;
-            dailyChest.msgTimer = 120;
+            dailyChest.chestMessage = `ПУСТО. ПРИХОДИ ЧЕРЕЗ ${hours}Ч ${mins}М`; dailyChest.msgTimer = 120;
         }
     }
 }
@@ -923,16 +893,11 @@ function setupMobileControls() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (isMobile) document.getElementById("mobile-joystick").style.display = "block";
 
-    const bLeft = document.getElementById("btn-left");
-    const bRight = document.getElementById("btn-right");
-    const bJump = document.getElementById("btn-jump");
-
+    const bLeft = document.getElementById("btn-left"); const bRight = document.getElementById("btn-right"); const bJump = document.getElementById("btn-jump");
     bLeft.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) { keys.left = true; player.direction = "left"; } });
     bLeft.addEventListener("touchend", (e) => { e.preventDefault(); keys.left = false; });
-
     bRight.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) { keys.right = true; player.direction = "right"; } });
     bRight.addEventListener("touchend", (e) => { e.preventDefault(); keys.right = false; });
-
     bJump.addEventListener("touchstart", (e) => { e.preventDefault(); initAudio(); if(!spawnLock) keys.jump = true; if(currentLevel === 3) tryOpenDailyChest(); });
     bJump.addEventListener("touchend", (e) => { e.preventDefault(); keys.jump = false; });
 }
@@ -949,45 +914,42 @@ window.addEventListener("resize", resizeGame);
 window.addEventListener("load", () => { resizeGame(); setupMobileControls(); });
 
 function checkCollision(rect1, rect2) {
-    return rect1.x < rect2.x + rect2.width &&
-           rect1.x + rect1.width > rect2.x &&
-           rect1.y < rect2.y + rect2.height &&
-           rect1.y + rect1.height > rect2.y;
+    return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y;
 }
 
-function toggleDayNight() {
-    isNight = !isNight;
-    applyDayNightUI();
-}
+function toggleDayNight() { isNight = !isNight; applyDayNightUI(); }
+
 function applyDayNightUI() {
     const btn = document.getElementById("daynight-btn");
     if(isNight) {
-        btn.innerHTML = "НОЧЬ 🌙"; 
-        btn.style.background = "linear-gradient(#2c3e50, #1a252f)"; 
-        btn.style.borderColor = "#151d24";
-        btn.style.boxShadow = "0 3px 0px #151d24";
+        btn.innerHTML = "НОЧЬ 🌙"; btn.style.background = "linear-gradient(#2c3e50, #1a252f)"; 
+        btn.style.borderColor = "#151d24"; btn.style.boxShadow = "0 3px 0px #151d24";
     } else {
-        btn.innerHTML = "ДЕНЬ ☀️"; 
-        btn.style.background = "linear-gradient(#f39c12, #d35400)"; 
-        btn.style.borderColor = "#a04000";
-        btn.style.boxShadow = "0 3px 0px #a04000";
+        btn.innerHTML = "ДЕНЬ ☀️"; btn.style.background = "linear-gradient(#f39c12, #d35400)"; 
+        btn.style.borderColor = "#a04000"; btn.style.boxShadow = "0 3px 0px #a04000";
+    }
+}
+
+function drawRoundedRectSafely(ctxX, x, y, width, height, radius) {
+    if (ctxX.roundRect) {
+        ctxX.roundRect(x, y, width, height, radius);
+    } else {
+        ctxX.moveTo(x + radius, y);
+        ctxX.lineTo(x + width - radius, y); ctxX.quadraticCurveTo(x + width, y, x + width, y + radius);
+ctxX.lineTo(x + width, y + height - radius); ctxX.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctxX.lineTo(x + radius, y + height); ctxX.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctxX.lineTo(x, y + radius); ctxX.quadraticCurveTo(x, y, x + radius, y);
     }
 }
 
 function drawActualWeapon(ctxX, x, y, id, scaleX = 1, isAxe = false, isSword = false, zombieStrikeAngle = 0) {
-    ctxX.save();
-    ctxX.translate(x, y);
-    ctxX.scale(scaleX, 1);
-    
-    if (zombieStrikeAngle !== 0) {
-        ctxX.rotate(zombieStrikeAngle);
-    }
+    ctxX.save(); ctxX.translate(x, y); ctxX.scale(scaleX, 1);
+    if (zombieStrikeAngle !== 0) { ctxX.rotate(zombieStrikeAngle); }
 
     if (isAxe) {
         ctxX.fillStyle = "#4a2711"; ctxX.fillRect(-2, -5, 4, 30); 
         ctxX.fillStyle = "#7f8c8d"; ctxX.strokeStyle = "#1c2833"; ctxX.lineWidth = 1.2;
-        ctxX.beginPath(); 
-        ctxX.moveTo(2, -7); ctxX.lineTo(16, -14); ctxX.lineTo(14, 6); ctxX.lineTo(2, -1); 
+        ctxX.beginPath(); ctxX.moveTo(2, -7); ctxX.lineTo(16, -14); ctxX.lineTo(14, 6); ctxX.lineTo(2, -1); 
         ctxX.closePath(); ctxX.fill(); ctxX.stroke();
         ctxX.fillStyle = "#922b21"; ctxX.fillRect(10, -5, 4, 6);
     } else if (isSword) {
@@ -998,18 +960,15 @@ function drawActualWeapon(ctxX, x, y, id, scaleX = 1, isAxe = false, isSword = f
     } else {
         if (id === 0) { 
             ctxX.fillStyle = "#111612"; ctxX.strokeStyle = "#196f3d"; ctxX.lineWidth = 1.5;
-            ctxX.beginPath(); ctxX.arc(-5, 0, 4, 0, Math.PI * 2); ctxX.stroke();
-            ctxX.fillRect(-2, -3, 12, 6);
+            ctxX.beginPath(); ctxX.arc(-5, 0, 4, 0, Math.PI * 2); ctxX.stroke(); ctxX.fillRect(-2, -3, 12, 6);
             let blade = ctxX.createLinearGradient(10, -3, 26, 12); blade.addColorStop(0, "#2ecc71"); blade.addColorStop(1, "#117a65");
             ctxX.fillStyle = blade; ctxX.lineWidth = 1; ctxX.strokeStyle = "#d4efdf";
             ctxX.beginPath(); ctxX.moveTo(10, -3); ctxX.quadraticCurveTo(22, -8, 28, 6); ctxX.quadraticCurveTo(18, 12, 10, 3); ctxX.closePath(); ctxX.fill(); ctxX.stroke();
         } else if (id === 1) { 
-            ctxX.fillStyle = "#1b263b"; ctxX.fillRect(-2, 5, 4, 10); 
-            ctxX.fillStyle = "#e0e1dd"; ctxX.fillRect(-6, 3, 12, 2); 
+            ctxX.fillStyle = "#1b263b"; ctxX.fillRect(-2, 5, 4, 10); ctxX.fillStyle = "#e0e1dd"; ctxX.fillRect(-6, 3, 12, 2); 
             let blade = ctxX.createLinearGradient(0, 3, 0, -28); blade.addColorStop(0, "#415a77"); blade.addColorStop(0.5, "#00b4d8"); blade.addColorStop(1, "#caf0f8");
             ctxX.fillStyle = blade; ctxX.strokeStyle = "#90e0ef"; ctxX.lineWidth = 1;
-            ctxX.beginPath();
-            ctxX.moveTo(-3, 3); ctxX.lineTo(-3, -24); ctxX.lineTo(0, -32); ctxX.lineTo(3, -24); ctxX.lineTo(3, 3);
+            ctxX.beginPath(); ctxX.moveTo(-3, 3); ctxX.lineTo(-3, -24); ctxX.lineTo(0, -32); ctxX.lineTo(3, -24); ctxX.lineTo(3, 3);
             ctxX.closePath(); ctxX.fill(); ctxX.stroke();
         } else if (id === 2) { 
             ctxX.fillStyle = "#111"; ctxX.fillRect(-15, -1, 14, 5); ctxX.fillRect(-3, 4, 4, 10); ctxX.fillStyle = "#2c3e50"; ctxX.fillRect(4, 4, 5, 12); 
@@ -1025,22 +984,18 @@ function drawSoldier(p) {
     if (p.direction === "left") {
         ctx.translate(p.x + p.width / 2, p.y + p.height / 2); ctx.scale(-1, 1); ctx.translate(-(p.x + p.width / 2), -(p.y + p.height / 2));
     }
-    
-    let primaryColor = "#3b5334"; let darkColor = "#1b2817"; let neonColor = "#55ff55";
-    let isNeonSkin = false;
+    let primaryColor = "#3b5334"; let darkColor = "#1b2817"; let neonColor = "#55ff55"; let isNeonSkin = false;
     
     if (currentSkin !== -1) { 
-        primaryColor = shopData[currentSkin].colors.base; 
-        darkColor = shopData[currentSkin].colors.dark; 
-        neonColor = shopData[currentSkin].colors.neon;
-if(currentSkin === 3) isNeonSkin = true;
+        primaryColor = shopData[currentSkin].colors.base; darkColor = shopData[currentSkin].colors.dark; neonColor = shopData[currentSkin].colors.neon;
+        if(currentSkin === 3) isNeonSkin = true;
     }
 
     let isMoving = (keys.right || keys.left) && !spawnLock;
     if (isMoving) p.animTime += 0.22 * dt; else p.animTime += 0.04 * dt; 
 
     let bodyBob = isMoving ? Math.sin(p.animTime * 1.5) * 2.5 : Math.sin(p.animTime) * 1;
-    let legSwing = isMoving ? Math.sin(p.animTime) * 9 : 0;
+let legSwing = isMoving ? Math.sin(p.animTime) * 9 : 0;
 
     ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(p.x + p.width/2, p.y + p.height, 15, 4.5, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
@@ -1076,14 +1031,10 @@ if(currentSkin === 3) isNeonSkin = true;
     ctx.restore();
 
     let wpnWobbleY = isMoving ? Math.cos(p.animTime * 1.5) * 1.8 : Math.sin(p.animTime) * 0.7;
-    let handX = p.x + 22;
-    let handY = bodyY + 7 + wpnWobbleY;
+    let handX = p.x + 22; let handY = bodyY + 7 + wpnWobbleY;
 
-    if (currentWeapon === -1) {
-        ctx.fillStyle = "#222"; ctx.fillRect(handX - 4, handY - 2, 18, 5); 
-    } else {
-        drawActualWeapon(ctx, handX, handY, currentWeapon, 1.25); 
-    }
+    if (currentWeapon === -1) { ctx.fillStyle = "#222"; ctx.fillRect(handX - 4, handY - 2, 18, 5); } 
+    else { drawActualWeapon(ctx, handX, handY, currentWeapon, 1.25); }
 
     ctx.fillStyle = darkColor; ctx.fillRect(handX - 3, handY - 3, 6, 6);
     ctx.fillStyle = neonColor; ctx.fillRect(handX - 2, handY - 2, 4, 2);
@@ -1093,45 +1044,29 @@ if(currentSkin === 3) isNeonSkin = true;
 
 function drawZombie(z) {
     ctx.save();
-    if (z.dx < 0) {
-        ctx.translate(z.x + z.width / 2, z.y + z.height / 2); ctx.scale(-1, 1); ctx.translate(-(z.x + z.width / 2), -(z.y + z.height / 2));
-    }
-    z.animTime += 0.18 * dt;
-    let legSwing = Math.sin(z.animTime) * 8.5; let bodyBob = Math.sin(z.animTime * 1.4) * 2.5;
+    if (z.dx < 0) { ctx.translate(z.x + z.width / 2, z.y + z.height / 2); ctx.scale(-1, 1); ctx.translate(-(z.x + z.width / 2), -(z.y + z.height / 2)); }
+    z.animTime += 0.18 * dt; let legSwing = Math.sin(z.animTime) * 8.5; let bodyBob = Math.sin(z.animTime * 1.4) * 2.5;
 
     ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(z.x + z.width/2, z.y + z.height, 14, 4, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
 
     ctx.fillStyle = "#1a252f"; ctx.fillRect(z.x + 3 + legSwing, z.y + z.height - 7, 7, 7); ctx.fillRect(z.x + z.width - 10 - legSwing, z.y + z.height - 7, 7, 7);
     ctx.fillStyle = "#2c3e50"; ctx.fillRect(z.x + 3 + legSwing, z.y + z.height - 22, 7, 15); ctx.fillRect(z.x + z.width - 10 - legSwing, z.y + z.height - 22, 7, 15);
 
-    let bodyY = z.y + 16 + bodyBob; 
-    let zombieFlesh = z.isKnight ? "#7f8c8d" : (z.isCaveZombie ? "#224422" : "#3b5e2b"); 
-    
+    let bodyY = z.y + 16 + bodyBob; let zombieFlesh = z.isKnight ? "#7f8c8d" : (z.isCaveZombie ? "#224422" : "#3b5e2b"); 
     ctx.fillStyle = zombieFlesh; ctx.fillRect(z.x + 2, bodyY, z.width - 4, 16);
-    if (z.isKnight) {
-        ctx.fillStyle = "#566573"; ctx.fillRect(z.x + 1, bodyY + 2, z.width - 2, 12);
-    } else {
-ctx.fillStyle = "#78281f"; ctx.fillRect(z.x + 4, bodyY + 5, 5, 6);
-    }
+    if (z.isKnight) { ctx.fillStyle = "#566573"; ctx.fillRect(z.x + 1, bodyY + 2, z.width - 2, 12); } 
+    else { ctx.fillStyle = "#78281f"; ctx.fillRect(z.x + 4, bodyY + 5, 5, 6); }
 
     let headY = z.y + 3 + bodyBob;
     ctx.fillStyle = zombieFlesh; ctx.fillRect(z.x + 6, headY, z.width - 12, 13);
-    
-    ctx.fillStyle = z.isKnight ? "#34495e" : "#51361a";
-    ctx.fillRect(z.x + 5, headY, z.width - 10, 3);
+    ctx.fillStyle = z.isKnight ? "#34495e" : "#51361a"; ctx.fillRect(z.x + 5, headY, z.width - 10, 3);
 
-    ctx.save(); 
-    ctx.fillStyle = z.isKnight ? "#00e5ff" : (z.isCaveZombie ? "#ffaa00" : "#ff2200"); ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect(z.x + z.width - 12, headY + 4, 3, 3); 
-    ctx.restore();
+    ctx.save();
+ctx.fillStyle = z.isKnight ? "#00e5ff" : (z.isCaveZombie ? "#ffaa00" : "#ff2200"); ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(z.x + z.width - 12, headY + 4, 3, 3); ctx.restore();
 
-    let handX = z.x + z.width - 2;
-    let handY = bodyY + 4;
-    let strikeAngle = 0;
-
-    if (z.isAttacking) {
-        strikeAngle = Math.sin((z.attackTimer / 25) * Math.PI) * 1.4;
-    }
+    let handX = z.x + z.width - 2; let handY = bodyY + 4; let strikeAngle = 0;
+    if (z.isAttacking) { strikeAngle = Math.sin((z.attackTimer / 25) * Math.PI) * 1.4; }
 
     drawActualWeapon(ctx, handX, handY, null, 1.2, z.weaponType === 'axe', z.weaponType === 'sword', strikeAngle);
     ctx.fillStyle = zombieFlesh; ctx.fillRect(handX - 2, handY - 2, 7, 5);
@@ -1141,14 +1076,9 @@ ctx.fillStyle = "#78281f"; ctx.fillRect(z.x + 4, bodyY + 5, 5, 6);
 
 function drawRealisticForest(ctxX, camX) {
     ctxX.save();
-    const baseColors = isNight ? 
-        ["#040905", "#081309", "#0e2010", "#142c16"] : 
-        ["#142516", "#1c3820", "#234c2b", "#2d6337"];
-
+    const baseColors = isNight ? ["#040905", "#081309", "#0e2010", "#142c16"] : ["#142516", "#1c3820", "#234c2b", "#2d6337"];
     for (let layer = 0; layer < 4; layer++) {
-        ctxX.fillStyle = baseColors[layer];
-        let parallaxFactor = 0.15 + layer * 0.22; 
-        
+        ctxX.fillStyle = baseColors[layer]; let parallaxFactor = 0.15 + layer * 0.22; 
         forestLayers[layer].forEach(t => {
             let pX = (t.x - camX * parallaxFactor);
             if (pX < -150) t.x += levelWidth;
@@ -1160,10 +1090,7 @@ function drawRealisticForest(ctxX, camX) {
 }
 
 function drawPineSilhouette(ctxX, x, baseY, scale, layers) {
-    ctxX.save();
-    ctxX.translate(x, baseY);
-    ctxX.scale(scale, scale);
-    ctxX.fillRect(-3, -16, 6, 16);
+    ctxX.save(); ctxX.translate(x, baseY); ctxX.scale(scale, scale); ctxX.fillRect(-3, -16, 6, 16);
     let startY = -12; let width = 36;
     for (let i = 0; i < layers; i++) {
         ctxX.beginPath(); ctxX.moveTo(0, startY - 26); ctxX.lineTo(-width / 2, startY); ctxX.lineTo(width / 2, startY); ctxX.closePath(); ctxX.fill();
@@ -1179,17 +1106,13 @@ function drawCastleParallax(ctxX, camX) {
     const layerSpeeds = [0.1, 0.22, 0.4, 0.65];
 
     for (let layer = 0; layer < 4; layer++) {
-        ctxX.fillStyle = isNight ? layerColorsNight[layer] : layerColorsDay[layer];
-        let speed = layerSpeeds[layer];
-
+        ctxX.fillStyle = isNight ? layerColorsNight[layer] : layerColorsDay[layer]; let speed = layerSpeeds[layer];
         castleLayers[layer].forEach(castle => {
             let cx = (castle.x - camX * speed);
             if (cx < -200) castle.x += levelWidth;
             if (cx > 850) castle.x -= levelWidth;
-
             ctxX.fillRect(cx, 370 - castle.height, castle.width, castle.height);
-            ctxX.fillRect(cx, 370 - castle.height - 6, 8, 6);
-            ctxX.fillRect(cx + castle.width - 8, 370 - castle.height - 6, 8, 6);
+            ctxX.fillRect(cx, 370 - castle.height - 6, 8, 6); ctxX.fillRect(cx + castle.width - 8, 370 - castle.height - 6, 8, 6);
         });
     }
     ctxX.restore();
@@ -1210,13 +1133,13 @@ function drawGameBackground() {
             let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height); 
             skyGrad.addColorStop(0, "#010408"); skyGrad.addColorStop(0.8, "#0a1526");
             ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-ctx.fillStyle = "rgba(255,255,255,0.6)";
+            ctx.fillStyle = "rgba(255,255,255,0.6)";
             backgroundStars.forEach(star => {
                 let sx = (star.x - camera.x * 0.1) % levelWidth; if (sx < 0) sx += levelWidth;
                 ctx.fillRect(sx, star.y, star.size, star.size);
             });
-            ctx.fillStyle = "#f4f6f7"; ctx.shadowBlur = 30; ctx.shadowColor = "#5dade2"; 
-            ctx.beginPath(); ctx.arc(680, 60, 24, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+            ctx.fillStyle = "#f4f6f7"; ctx.shadowBlur = 30; ctx.shadowColor = "#5dade2";
+ctx.beginPath(); ctx.arc(680, 60, 24, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
             drawRealisticForest(ctx, camera.x);
         }
 
@@ -1238,26 +1161,19 @@ ctx.fillStyle = "rgba(255,255,255,0.6)";
         } else {
             skyGrad.addColorStop(0, "#010204"); skyGrad.addColorStop(0.85, "#1c2833"); ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "rgba(255,255,255,0.5)";
-            backgroundStars.forEach(star => {
-                let sx = (star.x - camera.x * 0.08) % levelWidth; if (sx < 0) sx += levelWidth;
-                ctx.fillRect(sx, star.y, star.size, star.size);
-            });
+            backgroundStars.forEach(star => { let sx = (star.x - camera.x * 0.08) % levelWidth; if (sx < 0) sx += levelWidth; ctx.fillRect(sx, star.y, star.size, star.size); });
         }
         drawCastleParallax(ctx, camera.x);
     } else if (currentLevel === 3) {
         let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
         skyGrad.addColorStop(0, "#09090e"); skyGrad.addColorStop(1, "#141118");
         ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
         drawCastleParallax(ctx, camera.x);
-
         ctx.save();
         ctx.fillStyle = "#d4af37"; ctx.shadowBlur = 15; ctx.shadowColor = "#ffd700";
         for(let i=0; i<8; i++) {
-            let goldX = (3150 + i * 35 - camera.x);
-            if (goldX > -50 && goldX < 850) {
-                ctx.beginPath(); ctx.arc(goldX, 350, 15, 0, Math.PI, true); ctx.fill();
-            }
+            let goldX = (dailyChest.x + 15 + i * 35 - camera.x);
+            if (goldX > -50 && goldX < 850) { ctx.beginPath(); ctx.arc(goldX, 350, 15, 0, Math.PI, true); ctx.fill(); }
         }
         ctx.restore();
     }
@@ -1275,30 +1191,24 @@ function drawRealisticPlatform(plat) {
     ctx.fillStyle = blockGrad; ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
 
     if (gCol) { ctx.fillStyle = gCol; ctx.fillRect(plat.x, plat.y, plat.width, 6); }
-    
     ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
-    for (let k = plat.x + 25; k < plat.x + plat.width; k += 35) {
-        ctx.beginPath(); ctx.moveTo(k, plat.y); ctx.lineTo(k, plat.y + plat.height); ctx.stroke();
-    }
+    for (let k = plat.x + 25; k < plat.x + plat.width; k += 35) { ctx.beginPath(); ctx.moveTo(k, plat.y); ctx.lineTo(k, plat.y + plat.height); ctx.stroke(); }
 }
 
 function drawLaser(las) {
-    las.pulse += 0.08 * dt;
-    let thickness = 2 + Math.abs(Math.sin(las.pulse)) * 4;
-ctx.save(); ctx.fillStyle = "#222"; ctx.fillRect(las.x - 4, las.y - 4, 14, 8); ctx.fillRect(las.x - 4, las.y + las.height - 4, 14, 8);
+    las.pulse += 0.08 * dt; let thickness = 2 + Math.abs(Math.sin(las.pulse)) * 4;
+    ctx.save(); ctx.fillStyle = "#222"; ctx.fillRect(las.x - 4, las.y - 4, 14, 8); ctx.fillRect(las.x - 4, las.y + las.height - 4, 14, 8);
     ctx.shadowBlur = 18; ctx.shadowColor = "#ff0000"; ctx.fillStyle = "#ff3333"; ctx.fillRect(las.x + 3 - thickness/2, las.y, thickness, las.height);
     ctx.restore();
     if(Math.random() < 0.12) spawnParticle(las.x + 3, las.y + Math.random()*las.height, "#ff3333", 'laser');
 }
 
 function drawLava(lava) {
-    ctx.save();
-    let pulseGlow = 10 + Math.abs(Math.sin(performance.now() / 200)) * 10;
-    ctx.shadowBlur = pulseGlow; ctx.shadowColor = "#ff4500";
+    ctx.save(); let pulseGlow = 10 + Math.abs(Math.sin(performance.now() / 200)) * 10;
+ctx.shadowBlur = pulseGlow; ctx.shadowColor = "#ff4500";
     let lavaGrad = ctx.createLinearGradient(lava.x, lava.y, lava.x, lava.y + lava.height);
     lavaGrad.addColorStop(0, "#ff3300"); lavaGrad.addColorStop(0.5, "#ff6600"); lavaGrad.addColorStop(1, "#990000");
-    ctx.fillStyle = lavaGrad;
-    ctx.fillRect(lava.x, lava.y, lava.width, lava.height);
+    ctx.fillStyle = lavaGrad; ctx.fillRect(lava.x, lava.y, lava.width, lava.height);
     ctx.restore();
 }
 
@@ -1314,19 +1224,19 @@ function drawPortal(pt) {
     ctx.save(); pt.pulse += 0.05 * dt; let glow = Math.sin(pt.pulse) * 6; 
     let portalColor = currentLevel === 1 ? "#00ff88" : (currentLevel === 2 ? "#bd00ff" : "#00ffff"); 
     ctx.shadowBlur = 25; ctx.shadowColor = portalColor; ctx.fillStyle = currentLevel === 1 ? "#00220a" : "#220033"; ctx.strokeStyle = portalColor; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.roundRect(pt.x - glow/2, pt.y, pt.width + glow, pt.height, 12); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    drawRoundedRectSafely(ctx, pt.x - glow/2, pt.y, pt.width + glow, pt.height, 12);
+    ctx.fill(); ctx.stroke();
     ctx.restore();
 }
 
 function checkPromoExpirations() {
-    let now = Date.now();
-    let updated = false;
+    let now = Date.now(); let updated = false;
     weaponData.forEach(wpn => {
         if (wpn.expiresAt && now > wpn.expiresAt) {
             wpn.purchased = false; wpn.expiresAt = null;
             if (currentWeapon === wpn.id) currentWeapon = -1;
-            updated = true;
-            alert(`Срок действия промокода на предмет "${wpn.name}" истёк!`);
+            updated = true; alert(`Срок действия промокода на предмет "${wpn.name}" истёк!`);
         }
     });
     if (updated) saveToArchive();
@@ -1342,8 +1252,7 @@ function switchScreen(screenId) {
 
 function renderShopPreviews() {
     shopData.forEach(skin => {
-        const previewCanvas = document.getElementById("ic-skin-" + skin.id);
-        if (!previewCanvas) return;
+        const previewCanvas = document.getElementById("ic-skin-" + skin.id); if (!previewCanvas) return;
         const cS = previewCanvas.getContext("2d");
         cS.clearRect(0, 0, 75, 70); cS.fillStyle = skin.colors.dark; cS.fillRect(0,0,75,70);
         cS.fillStyle = "rgba(255,255,255,0.06)"; cS.beginPath(); cS.arc(37,35,25,0,Math.PI*2); cS.fill();
@@ -1353,23 +1262,21 @@ function renderShopPreviews() {
         cS.fillStyle = primaryColor; cS.beginPath(); cS.arc(15, 8, 8, Math.PI, 0); cS.fill(); cS.fillRect(7, 8, 16, 4); 
         cS.fillStyle = skin.colors.neon; cS.fillRect(10, 8, 10, 3); cS.restore();
     });
-const cKer = document.getElementById("preview-kerambit").getContext("2d");
+    const cKer = document.getElementById("preview-kerambit").getContext("2d");
     if (cKer) { cKer.clearRect(0,0,75,70); cKer.fillStyle = "#0e1111"; cKer.fillRect(0,0,75,70); drawActualWeapon(cKer, 22, 35, 0, 1.4); }
     const cBut = document.getElementById("preview-butterfly").getContext("2d");
     if (cBut) { cBut.clearRect(0,0,75,70); cBut.fillStyle = "#0e1111"; cBut.fillRect(0,0,75,70); drawActualWeapon(cBut, 24, 35, 1, 1.4); }
     const cGrad = document.getElementById("preview-gradient").getContext("2d");
-    if (cGrad) { cGrad.clearRect(0,0,75,70); cGrad.fillStyle = "#0e1111"; cGrad.fillRect(0,0,75,70); drawActualWeapon(cGrad, 20, 35, 2, 1.4); }
+if (cGrad) { cGrad.clearRect(0,0,75,70); cGrad.fillStyle = "#0e1111"; cGrad.fillRect(0,0,75,70); drawActualWeapon(cGrad, 20, 35, 2, 1.4); }
 }
 
 function startGame(lvl) {
     initAudio(); checkPromoExpirations();
     document.getElementById("main-menu").style.display = "none"; document.getElementById("ui-layer").style.display = "block"; 
     document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
-    isNight = false; applyDayNightUI();
-    loadLevelData(lvl);
+    isNight = false; applyDayNightUI(); loadLevelData(lvl);
     floatingTexts = []; particles = []; dailyChest.chestMessage = ""; dailyChest.msgTimer = 0;
-    spawnLock = true; player.dx = 0; player.dy = 0;
-    keys.right = false; keys.left = false; keys.jump = false;
+    spawnLock = true; player.dx = 0; player.dy = 0; keys.right = false; keys.left = false; keys.jump = false;
     player.x = 50; player.y = 300; 
     setTimeout(() => { spawnLock = false; }, 400);
     isPlaying = true; lastTime = performance.now();
@@ -1377,28 +1284,18 @@ function startGame(lvl) {
 
 function returnToMenu() { isPlaying = false; switchScreen('main-menu'); }
 
+// ШТРАФ 100 МОНЕТ ПРИ СМЕРТИ
 function handleGameOver() {
-    isPlaying = false; // Важно: останавливаем цикл рендеринга перед алертом, чтобы избежать фризов!
-    keys.right = false; keys.left = false; keys.jump = false;
-    playSound('hit');
-    GlobalCoins = Math.max(0, GlobalCoins - 15);
-    saveToArchive(); // Сохраняем потерю монет
-    alert("Вы пали в бою! Потеряно: -15 🪙"); 
-    startGame(currentLevel); 
+    isPlaying = false; keys.right = false; keys.left = false; keys.jump = false; playSound('hit');
+    GlobalCoins = Math.max(0, GlobalCoins - 100); saveToArchive();
+    alert("Вы пали в бою! Потеряно: -100 🪙"); startGame(currentLevel); 
 }
 
 function handleLevelComplete() {
     isPlaying = false;
-    if (currentLevel === 1) {
-        alert("Уровень 1 (Чаща) успешно пройден! Переход в Каменное королевство... 🏰");
-        startGame(2);
-    } else if (currentLevel === 2) {
-        alert("Уровень 2 (Королевство) пройдено! Опускаемся в опасные шахты подземелья... 🔥");
-        startGame(3);
-    } else {
-        gameEndedState = true;
-        isPlaying = true; 
-    }
+    if (currentLevel === 1) { alert("Уровень 1 (Чаща) успешно пройден! Переход в Каменное королевство... 🏰"); startGame(2); } 
+    else if (currentLevel === 2) { alert("Уровень 2 (Королевство) пройдено! Опускаемся в опасные шахты подземелья... 🔥 Карта увеличена, берегись зомби!"); startGame(3); } 
+    else { gameEndedState = true; isPlaying = true; }
 }
 
 function openShop() { checkPromoExpirations(); switchScreen('shop-menu'); }
@@ -1427,37 +1324,28 @@ function buyOrSelectSkin(id) {
     if (skin.purchased) { currentSkin = id; } 
     else if (GlobalCoins >= skin.price) { GlobalCoins -= skin.price; skin.purchased = true; currentSkin = id; } 
     else { alert("Недостаточно монет!"); }
-    saveToArchive();
-    updateShopUI();
+    saveToArchive(); updateShopUI();
 }
 
 function handlePlatformCollisions(entity) {
     entity.grounded = false;
     for (let plat of platforms) {
         if (checkCollision(entity, plat)) {
-let fromTop = (entity.y + entity.height - entity.dy * dt) <= plat.y + 4;
-            if (entity.dy >= 0 && fromTop) {
-                entity.y = plat.y - entity.height; entity.dy = 0; entity.grounded = true; continue;
-            }
-            if (entity.dx > 0 && (entity.x + entity.width - entity.dx * dt) <= plat.x + 2) {
-                entity.x = plat.x - entity.width;
-            } else if (entity.dx < 0 && (entity.x - entity.dx * dt) >= plat.x + plat.width - 2) {
-                entity.x = plat.x + plat.width;
-            }
-            if (entity.dy < 0 && (entity.y - entity.dy * dt) >= plat.y + plat.height - 4) {
-                entity.y = plat.y + plat.height; entity.dy = 0;
-            }
+            let fromTop = (entity.y + entity.height - entity.dy * dt) <= plat.y + 4;
+            if (entity.dy >= 0 && fromTop) { entity.y = plat.y - entity.height; entity.dy = 0; entity.grounded = true; continue; }
+            if (entity.dx > 0 && (entity.x + entity.width - entity.dx * dt) <= plat.x + 2) { entity.x = plat.x - entity.width; } 
+            else if (entity.dx < 0 && (entity.x - entity.dx * dt) >= plat.x + plat.width - 2) { entity.x = plat.x + plat.width; }
+            if (entity.dy < 0 && (entity.y - entity.dy * dt) >= plat.y + plat.height - 4) { entity.y = plat.y + plat.height; entity.dy = 0; }
         }
     }
 }
 
 function buyOrSelectWeapon(id) {
-    checkPromoExpirations(); const wpn = weaponData[id];
+checkPromoExpirations(); const wpn = weaponData[id];
     if (wpn.purchased) { currentWeapon = id; } 
     else if (GlobalCoins >= wpn.price) { GlobalCoins -= wpn.price; wpn.purchased = true; currentWeapon = id; } 
     else { alert("Недостаточно монет!"); }
-    saveToArchive();
-    updateShopUI();
+    saveToArchive(); updateShopUI();
 }
 
 function activatePromoCode() {
@@ -1466,33 +1354,26 @@ function activatePromoCode() {
     let oneHour = 60 * 60 * 1000; 
 
     if (code === "KNIFEGREEN") {
-        weaponData[0].purchased = true; weaponData[0].expiresAt = Date.now() + oneHour; currentWeapon = 0; usedPromos.push(code);
-        alert("Керамбит Изумруд получен на 1 час!");
+        weaponData[0].purchased = true; weaponData[0].expiresAt = Date.now() + oneHour; currentWeapon = 0; usedPromos.push(code); alert("Керамбит Изумруд получен на 1 час!");
     } else if (code === "BATERFLIP189" || code === "SAPPHIRE") {
-        weaponData[1].purchased = true; weaponData[1].expiresAt = Date.now() + oneHour; currentWeapon = 1; usedPromos.push(code);
-        alert("Сапфировый Меч получен на 1 час!");
+        weaponData[1].purchased = true; weaponData[1].expiresAt = Date.now() + oneHour; currentWeapon = 1; usedPromos.push(code); alert("Сапфировый Меч получен на 1 час!");
     } else if (code === "GAMAJORIK") {
-        weaponData[2].purchased = true; weaponData[2].expiresAt = Date.now() + oneHour; currentWeapon = 2; usedPromos.push(code);
-        alert("Штурмовой Градиент получен на 1 час!");
+        weaponData[2].purchased = true; weaponData[2].expiresAt = Date.now() + oneHour; currentWeapon = 2; usedPromos.push(code); alert("Штурмовой Градиент получен на 1 час!");
     } else if (code === "DIAMOND136") {
-        shopData[2].purchased = true; currentSkin = 2; usedPromos.push(code);
-        alert("Получен скин Кристалл Кибер! 💎");
+        shopData[2].purchased = true; currentSkin = 2; usedPromos.push(code); alert("Получен скин Кристалл Кибер! 💎");
     } else if (code === "MAJORITO") {
-        GlobalCoins += 5000; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
-        alert("Начислено +5000 монет! 💰");
+        GlobalCoins += 5000; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins; alert("Начислено +5000 монет! 💰");
     } else if (code === "COIN777") {
-        GlobalCoins += 777; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
-        alert("Получено +777 монет!");
+        GlobalCoins += 777; usedPromos.push(code); document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins; alert("Получено +777 монет!");
     } else { alert("Неверный промокод."); return;}
     
-    saveToArchive();
-    input.value = ""; if(document.getElementById("shop-menu").style.display === "flex") { updateShopUI(); }
+    saveToArchive(); input.value = ""; if(document.getElementById("shop-menu").style.display === "flex") { updateShopUI(); }
 }
 
 function update(currentTime) {
     let elapsed = currentTime - lastTime; lastTime = currentTime;
     if (elapsed > 100) elapsed = 16.66;
-    dt = elapsed / (1000 / TARGET_FPS);
+    dt = Math.min(elapsed / (1000 / TARGET_FPS), 3);
 
     if (isPlaying && !gameEndedState) {
         if (!spawnLock) {
@@ -1514,7 +1395,7 @@ function update(currentTime) {
         
         if (player.y > canvas.height + 100) { handleGameOver(); requestAnimationFrame(update); return; }
         for (let lava of lavaZones) {
-if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(update); return; }
+            if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(update); return; }
         }
 
         handlePlatformCollisions(player);
@@ -1529,8 +1410,8 @@ if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(upda
             coin.pulse += 0.1 * dt;
             if (!coin.collected && checkCollision(player, { x: coin.x, y: coin.y, width: 20, height: 20 })) {
                 coin.collected = true; GlobalCoins += 50; playSound('coin');
-                saveToArchive(); // Сохраняем баланс при подборе монеты
-                document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
+                saveToArchive();
+document.getElementById("coin-counter").innerText = "🪙 " + GlobalCoins;
                 floatingTexts.push({ x: coin.x + 5, y: coin.y, alpha: 1, timer: 40 });
                 for(let k=0; k<8; k++) spawnParticle(coin.x + 10, coin.y + 10, "#fcb434", 'laser');
             }
@@ -1538,47 +1419,32 @@ if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(upda
 
         if (dailyChest.msgTimer > 0) dailyChest.msgTimer -= dt;
 
-        floatingTexts.forEach((txt, idx) => {
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            let txt = floatingTexts[i];
             txt.y -= 1.5 * dt; txt.alpha -= 0.025 * dt; txt.timer -= dt;
-            if (txt.timer <= 0) floatingTexts.splice(idx, 1);
-        });
+            if (txt.timer <= 0) floatingTexts.splice(i, 1);
+        }
 
-        particles.forEach((p, idx) => {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
             p.x += p.vx * dt; p.y += p.vy * dt; p.alpha -= 0.03 * dt; p.life -= dt;
-            if(p.life <= 0 || p.alpha <= 0) particles.splice(idx, 1);
-        });
+            if(p.life <= 0 || p.alpha <= 0) particles.splice(i, 1);
+        }
 
-        for (let i = 0; i < zombies.length; i++) {
+        for (let i = zombies.length - 1; i >= 0; i--) {
             let z = zombies[i];
-            let distanceToPlayer = Math.abs(player.x - z.x);
-            let verticalDist = Math.abs(player.y - z.y);
+            let distanceToPlayer = Math.abs(player.x - z.x); let verticalDist = Math.abs(player.y - z.y);
 
             if (z.isCaveZombie) {
                 let checkAheadX = z.x + (z.dx > 0 ? z.width + 10 : -10);
                 let nextStepRect = { x: z.x + z.dx * dt, y: z.y, width: z.width, height: z.height };
-                
-                let lavaAhead = false;
-                for (let lava of lavaZones) {
-                    if (checkCollision(nextStepRect, lava)) lavaAhead = true;
-                }
+                let lavaAhead = false; for (let lava of lavaZones) { if (checkCollision(nextStepRect, lava)) lavaAhead = true; }
+                let platformAhead = false; let testFloorRect = { x: checkAheadX, y: z.y + z.height + 2, width: 10, height: 5 };
+                for (let plat of platforms) { if (checkCollision(testFloorRect, plat)) platformAhead = true; }
 
-                let platformAhead = false;
-                let testFloorRect = { x: checkAheadX, y: z.y + z.height + 2, width: 10, height: 5 };
-                for (let plat of platforms) {
-                    if (checkCollision(testFloorRect, plat)) platformAhead = true;
-                }
-
-                if (lavaAhead || (!platformAhead && z.grounded)) {
-                    z.dx = -z.dx;
-                }
-
-                if (distanceToPlayer < 200 && verticalDist < 60 && !lavaAhead) {
-                    z.dx = player.x > z.x ? Math.abs(z.speed) : -Math.abs(z.speed);
-                }
-                
-                if (distanceToPlayer < 45 && !z.isAttacking) {
-                    z.isAttacking = true; z.attackTimer = 0; playSound('slash');
-                }
+                if (lavaAhead || (!platformAhead && z.grounded)) { z.dx = -z.dx; }
+                if (distanceToPlayer < 200 && verticalDist < 60 && !lavaAhead) { z.dx = player.x > z.x ? Math.abs(z.speed) : -Math.abs(z.speed); }
+                if (distanceToPlayer < 45 && !z.isAttacking) { z.isAttacking = true; z.attackTimer = 0; playSound('slash'); }
             } else {
                 if (distanceToPlayer < 260 && verticalDist < 100) {
                     z.dx = player.x > z.x ? z.speed : -z.speed;
@@ -1592,28 +1458,27 @@ if (checkCollision(player, lava)) { handleGameOver(); requestAnimationFrame(upda
 
             if (z.isAttacking) {
                 z.attackTimer += 1 * dt;
-                if (z.attackTimer >= 12 && z.attackTimer <= 14) {
-                    if (distanceToPlayer < 40 && verticalDist < 30) { handleGameOver(); return; }
+                if (z.attackTimer >= 12 && z.attackTimer <= 14) { 
+                    if (distanceToPlayer < 40 && verticalDist < 30) { 
+                        handleGameOver(); requestAnimationFrame(update); return; 
+                    } 
                 }
                 if (z.attackTimer >= 25) z.isAttacking = false;
             }
 
-            z.dy += GLOBAL_GRAVITY * dt;
-            z.x += z.dx * dt; z.y += z.dy * dt;
-
+            z.dy += GLOBAL_GRAVITY * dt; z.x += z.dx * dt; z.y += z.dy * dt;
             handlePlatformCollisions(z);
-if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random() < 0.025 * dt && !z.isCaveZombie) {
-                z.dy = z.jumpPower; z.grounded = false;
-            }
+
+            if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random() < 0.025 * dt && !z.isCaveZombie) { z.dy = z.jumpPower; z.grounded = false; }
 
             if (checkCollision(player, z)) {
                 if (player.dy > 0 && player.y + player.height - player.dy * dt <= z.y + 15) {
                     player.dy = player.jumpPower / 1.3; playSound('hit');
                     let particleColor = z.isKnight ? "#90a4ae" : (z.isCaveZombie ? "#2d6337" : "#4caf50");
                     for(let k=0; k<12; k++) spawnParticle(z.x + z.width/2, z.y + z.height/2, particleColor, 'laser');
-                    zombies.splice(i, 1); i--;
+                    zombies.splice(i, 1);
                 } else if (!z.isAttacking) { 
-                    handleGameOver(); return; 
+                    handleGameOver(); requestAnimationFrame(update); return; 
                 }
             }
         }
@@ -1623,13 +1488,21 @@ if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random()
     drawGameBackground();
 
     ctx.save(); ctx.translate(-camera.x, 0);
-
-    for (let lava of lavaZones) drawLava(lava);
+for (let lava of lavaZones) drawLava(lava);
     for (let plat of platforms) drawRealisticPlatform(plat);
     for (let las of lasers) drawLaser(las);
 
     particles.forEach(p => {
-        ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
+        ctx.save(); ctx.globalAlpha = Math.max(0, p.alpha); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); ctx.restore();
+    });
+
+    floatingTexts.forEach(txt => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, txt.alpha);
+        ctx.fillStyle = "#fcb434";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText("+50", txt.x, txt.y);
+        ctx.restore();
     });
 
     coins.forEach((coin) => {
@@ -1640,17 +1513,45 @@ if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random()
         }
     });
 
+    // ОТРИСОВКА ОБНОВЛЕННОГО КРАСИВОГО СУНДУКА
     if (currentLevel === 3) {
         ctx.save();
-        ctx.fillStyle = "#8b5a2b"; ctx.strokeStyle = "#cd7f32"; ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 10; ctx.shadowColor = "#ffaa00";
-        ctx.beginPath(); ctx.roundRect(dailyChest.x, dailyChest.y, dailyChest.width, dailyChest.height, 6); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#fcb434"; ctx.fillRect(dailyChest.x + dailyChest.width/2 - 4, dailyChest.y + 14, 8, 10);
+        // Внешнее неоновое свечение сундука
+        ctx.shadowBlur = 20; ctx.shadowColor = "#ffaa00";
+        
+        // Основной градиент корпуса (дорогое дерево с металлом)
+        let chestGrad = ctx.createLinearGradient(dailyChest.x, dailyChest.y, dailyChest.x, dailyChest.y + dailyChest.height);
+        chestGrad.addColorStop(0, "#8a4f2a"); chestGrad.addColorStop(0.4, "#5c331a"); chestGrad.addColorStop(1, "#2e190e");
+        ctx.fillStyle = chestGrad;
+        ctx.strokeStyle = "#422415"; ctx.lineWidth = 2;
+        ctx.beginPath(); 
+        drawRoundedRectSafely(ctx, dailyChest.x, dailyChest.y, dailyChest.width, dailyChest.height, 8); 
+        ctx.fill(); ctx.stroke();
+
+        // Стальные защитные уголки ковки
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillRect(dailyChest.x, dailyChest.y, 10, 10);
+        ctx.fillRect(dailyChest.x + dailyChest.width - 10, dailyChest.y, 10, 10);
+        ctx.fillRect(dailyChest.x, dailyChest.y + dailyChest.height - 12, 10, 12);
+        ctx.fillRect(dailyChest.x + dailyChest.width - 10, dailyChest.y + dailyChest.height - 12, 10, 12);
+
+        // Горизонтальные кованые полосы
+        ctx.fillStyle = "#566573";
+        ctx.fillRect(dailyChest.x, dailyChest.y + 14, dailyChest.width, 4);
+
+        // Магическая неоновая замочная скважина (золотой замок с рубином)
+        ctx.fillStyle = "#e67e22";
+        ctx.fillRect(dailyChest.x + dailyChest.width/2 - 7, dailyChest.y + 12, 14, 16);
+        ctx.fillStyle = "#e74c3c"; // Драгоценный рубин по центру замка
+        ctx.beginPath();
+        ctx.arc(dailyChest.x + dailyChest.width/2, dailyChest.y + 18, 3, 0, Math.PI*2);
+        ctx.fill();
+        
         ctx.restore();
 
         if (Math.abs(player.x - dailyChest.x) < 80) {
             ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial";
-            ctx.fillText("КЛАВИША [E]", dailyChest.x - 8, dailyChest.y - 12);
+            ctx.fillText("КЛАВИША [E]", dailyChest.x - 2, dailyChest.y - 12);
         }
     }
 
@@ -1668,12 +1569,11 @@ if (z.grounded && distanceToPlayer < 250 && player.y < z.y - 35 && Math.random()
 
     if (gameEndedState) {
         ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ff3333"; ctx.font = "black 38px Impact"; ctx.textAlign = "center";
+        ctx.fillStyle = "#ff3333"; ctx.font = "900 38px Impact"; ctx.textAlign = "center";
         ctx.fillText("В РАЗРАБОТКЕ...", canvas.width / 2, canvas.height / 2);
         ctx.fillStyle = "#fff"; ctx.font = "14px Arial";
-        ctx.fillText("Вы успешно зачистили пещеры подземелья!", canvas.width / 2, canvas.height / 2 + 40);
-        
-        ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "bold 12px Arial";
+        ctx.fillText("Вы успешно зачистили сложнейшие пещеры подземелья!", canvas.width / 2, canvas.height / 2 + 40);
+ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "bold 12px Arial";
         ctx.fillText("НАЖМИ 'МЕНЮ' ЧТОБЫ ВЫЙТИ", canvas.width / 2, canvas.height - 30);
     }
 
